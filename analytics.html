@@ -1,0 +1,92 @@
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>iColor Plus — Usage Analytics</title>
+<link rel="stylesheet" href="styles.css" />
+<style>
+  body { background: var(--bg); color: var(--text); font-family: "Segoe UI", system-ui, sans-serif; }
+  .gate { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 50; }
+  .gate .box { background: var(--panel); border: 1px solid var(--ring); border-radius: 16px; padding: 26px; width: 320px; max-width: 90vw; text-align: center; }
+  .gate input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--ring); background: rgba(0,0,0,0.3); color: var(--text); margin: 8px 0; font-size: 15px; text-align: center; }
+  .gate .err { color: #ff8f8f; font-size: 13px; min-height: 16px; }
+</style>
+
+<div id="gate" class="gate">
+  <div class="box">
+    <h2 style="margin:0 0 6px;color:var(--accent-2)">Usage Analytics</h2>
+    <p class="hint" style="color:var(--muted);font-size:13px">Client admin sign-in.</p>
+    <input id="gu" type="text" placeholder="Username" autocomplete="off" />
+    <input id="gp" type="password" placeholder="Password" autocomplete="off" />
+    <div id="ge" class="err"></div>
+    <button id="gb" class="btn" style="width:100%">Unlock</button>
+  </div>
+</div>
+
+<div id="app" class="dash-wrap" style="display:none">
+  <div class="dash-head">
+    <div>
+      <h1>Usage Analytics</h1>
+      <p class="sub" id="locSub">—</p>
+    </div>
+    <div class="row" style="gap:8px">
+      <a class="btn ghost" href="admin.html">Admin</a>
+      <a class="btn ghost" href="index.html">Open app →</a>
+    </div>
+  </div>
+
+  <div id="demoBanner" class="demo-banner" style="display:none">Showing sample demo data. Use “Clear data” to reset to live counts.</div>
+
+  <div class="a-card">
+    <h2>This location</h2>
+    <div class="row" style="gap:14px;align-items:flex-end;flex-wrap:wrap">
+      <div class="field" style="flex:2;min-width:200px"><label>Location / store / event name</label><input id="locName" type="text" placeholder="e.g. Watsons SM North EDSA" /></div>
+      <div class="field" style="min-width:130px"><label>Type</label><select id="locType"><option value="store">Store / retail</option><option value="event">Event</option><option value="web">Web / QR</option></select></div>
+      <div class="field" style="min-width:150px"><label>Location ID</label><input id="locId" type="text" placeholder="auto from name" /></div>
+      <button id="saveLoc" class="btn">Save location</button>
+    </div>
+    <p class="hint" style="color:var(--muted);font-size:12px;margin-top:8px">Every try-on on this device is tagged with this location. Set it once per store/event.</p>
+  </div>
+
+  <div class="kpi-row" id="kpis"></div>
+
+  <div class="panel-grid">
+    <div class="a-card">
+      <h2>Try-ons per product <span class="muted">/ SKU</span></h2>
+      <div id="skuBars"></div>
+    </div>
+    <div>
+      <div class="a-card">
+        <h2>14-day activity <span class="muted">try-ons</span></h2>
+        <div id="spark"></div>
+      </div>
+      <div class="a-card" style="margin-top:16px">
+        <h2>Skin undertone mix</h2>
+        <div id="undertone"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="a-card">
+    <h2>Busiest hours <span class="muted">/ time of day</span></h2>
+    <div id="heat"></div>
+  </div>
+
+  <div class="a-card">
+    <h2>Engagement funnel</h2>
+    <div id="funnel"></div>
+  </div>
+
+  <div class="a-card">
+    <div class="row" style="gap:10px;flex-wrap:wrap">
+      <button id="exportLoc" class="btn">⬇ Export this location</button>
+      <button id="seed" class="btn ghost">Load demo data</button>
+      <button id="clear" class="btn danger">Clear data</button>
+      <span class="hint" style="color:var(--muted);align-self:center;font-size:12px">Export sends this location's numbers to Mineski for the consolidated view.</span>
+    </div>
+  </div>
+</div>
+
+<div id="toastA" class="toast-a" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.85);border:1px solid var(--ring);padding:12px 20px;border-radius:999px;opacity:0;transition:opacity .25s;z-index:60"></div>
+
+<script src="config.default.js"></script>
+<script src="analytics.js"></script>
+<script src="analytics_dash.js"></script>

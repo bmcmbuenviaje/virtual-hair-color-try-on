@@ -1,0 +1,258 @@
+/* iColor Plus — Super Admin (Mineski): client-view controls + consolidated analytics */
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const A = window.Analytics, D = window.Dash;
+  const clone = (o) => JSON.parse(JSON.stringify(o));
+
+  const PERMS = [
+    ["showShades", "Colour manager"],
+    ["showExport", "Export / import build"],
+    ["showAnalytics", "Usage analytics link"],
+    ["readOnly", "View-only (client can't save)"],
+  ];
+
+  const FEATURE_LABELS = [
+    ["photo", "Take photo"], ["video", "Record video (30s)"], ["upload", "Upload selfie"],
+    ["split", "Before/after split"], ["grid", "Compare grid"], ["brighten", "Brighten toggle"],
+    ["analysis", "Hair & skin analysis"], ["statement", "Statement colours"], ["vibe", "Vibe filter"],
+    ["ratePicks", "Rate your picks"], ["cards", "Save/Share cards"], ["print", "Print (A5)"],
+    ["watermark", "Watermark captures"], ["qr", "QR to phone"], ["promo", "Promo banner"],
+    ["coupon", "Coupon on report"], ["leads", "Lead capture"], ["heatmap", "Time-of-day / heatmap"],
+    ["getlook", "Get this look"], ["multilang", "Tagalog / English"], ["offline", "Offline mode"],
+  ];
+  const ALLF = FEATURE_LABELS.map((f) => f[0]);
+  const PRESETS = {
+    basic: { label: "Basic", maxShades: 5, on: ["photo", "qr", "offline"] },
+    standard: { label: "Standard", maxShades: null, on: ["photo", "video", "upload", "split", "grid", "brighten", "cards", "qr", "promo", "multilang", "offline"] },
+    pro: { label: "Pro", maxShades: null, on: ["photo", "video", "upload", "split", "grid", "brighten", "analysis", "statement", "vibe", "ratePicks", "cards", "qr", "promo", "getlook", "heatmap", "multilang", "offline"] },
+    allin: { label: "All-in", maxShades: null, on: ALLF.filter((k) => k !== "watermark") },
+  };
+
+  function resolved() { return A.resolvedConfig(); }
+  // working config = localStorage override if present, else default (deep clone)
+  function loadCfg() {
+    let over = null;
+    try { over = JSON.parse(localStorage.getItem("icolorConfig") || "null"); } catch (e) {}
+    const base = over && Array.isArray(over.shades) ? over : (window.ICOLOR_DEFAULT_CONFIG || {});
+    const cfg = clone(base);
+    cfg.clientAdmin = Object.assign(
+      { showShades: true, showExport: true, showAnalytics: true, readOnly: false },
+      cfg.clientAdmin || {}
+    );
+    cfg.features = cfg.features || {};
+    ALLF.forEach((k) => { if (typeof cfg.features[k] !== "boolean") cfg.features[k] = false; });
+    cfg.promo = Object.assign({ enabled: false, shadeId: "", title: "Shade of the Week", message: "", image: "" }, cfg.promo || {});
+    cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "" }, cfg.coupon || {});
+    cfg.backend = Object.assign({ provider: "none", url: "" }, cfg.backend || {});
+    return cfg;
+  }
+  let cfg = loadCfg();
+
+  function toast(m) { const t = $("toastA"); t.textContent = m; t.style.opacity = 1; clearTimeout(toast._t); toast._t = setTimeout(() => (t.style.opacity = 0), 1900); }
+  function download(obj, name, type) {
+    const blob = new Blob([type === "js" ? obj : JSON.stringify(obj, null, 2)], { type: type === "js" ? "text/javascript" : "application/json" });
+    const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  /* ---- gate ---- */
+  function unlock() {
+    const sa = (resolved().superAdmin || {});
+    const u = ($("gu").value || "").trim(), p = $("gp").value || "";
+    if (u === (sa.username || "superadmin") && p === (sa.password || "mineski")) {
+      sessionStorage.setItem("icolorSuperOk", "1");
+      $("gate").style.display = "none"; $("app").style.display = ""; boot();
+    } else $("ge").textContent = "Incorrect credentials.";
+  }
+  $("gb").addEventListener("click", unlock);
+  $("gp").addEventListener("keydown", (e) => { if (e.key === "Enter") unlock(); });
+  if (sessionStorage.getItem("icolorSuperOk") === "1") { $("gate").style.display = "none"; $("app").style.display = ""; }
+
+  /* ---- client-view perms ---- */
+  function renderPerms() {
+    $("perms").innerHTML = PERMS.map(([k, label]) =>
+      `<label class="perm"><input type="checkbox" data-perm="${k}" ${cfg.clientAdmin[k] ? "checked" : ""}/> ${label}</label>`
+    ).join("");
+    $("perms").querySelectorAll("[data-perm]").forEach((c) =>
+      c.addEventListener("change", () => { cfg.clientAdmin[c.dataset.perm] = c.checked; })
+    );
+  }
+
+  /* ---- package tier + features + promo + coupon ---- */
+  function activePreset() {
+    for (const k in PRESETS) {
+      const on = new Set(PRESETS[k].on);
+      const match = ALLF.every((f) => !!cfg.features[f] === on.has(f)) && (cfg.maxShades || null) === (PRESETS[k].maxShades || null);
+      if (match) return k;
+    }
+    return "custom";
+  }
+  function renderPresets() {
+    const cur = activePreset();
+    $("presets").innerHTML =
+      Object.keys(PRESETS).map((k) => `<button class="btn ${cur === k ? "on" : ""}" data-preset="${k}">${PRESETS[k].label}</button>`).join("") +
+      `<button class="btn ${cur === "custom" ? "on" : ""}" disabled style="opacity:.7">Custom</button>`;
+    $("presets").querySelectorAll("[data-preset]").forEach((b) =>
+      b.addEventListener("click", () => {
+        const p = PRESETS[b.dataset.preset]; const on = new Set(p.on);
+        ALLF.forEach((f) => (cfg.features[f] = on.has(f)));
+        cfg.maxShades = p.maxShades; cfg.tier = p.label;
+        renderPresets(); renderFeatures(); if ($("tierName")) $("tierName").value = cfg.tier;
+      })
+    );
+  }
+  function renderFeatures() {
+    $("features").innerHTML = FEATURE_LABELS.map(([k, l]) => `<label class="feat"><input type="checkbox" data-feat="${k}" ${cfg.features[k] ? "checked" : ""}/> ${l}</label>`).join("");
+    $("features").querySelectorAll("[data-feat]").forEach((c) =>
+      c.addEventListener("change", () => {
+        cfg.features[c.dataset.feat] = c.checked;
+        cfg.tier = activePreset() === "custom" ? "Custom" : PRESETS[activePreset()].label;
+        if ($("tierName")) $("tierName").value = cfg.tier;
+        renderPresets();
+      })
+    );
+  }
+  function renderPromo() {
+    $("promoEnabled").checked = !!cfg.promo.enabled;
+    const shades = (cfg.shades || []).filter((s) => s.hex);
+    $("promoShade").innerHTML = `<option value="">— none —</option>` + shades.map((s) => `<option value="${s.id}" ${cfg.promo.shadeId === s.id ? "selected" : ""}>${s.name}</option>`).join("");
+    $("promoTitle").value = cfg.promo.title || "";
+    $("promoMsg").value = cfg.promo.message || "";
+    const prev = $("promoPrev");
+    if (cfg.promo.image) { prev.src = cfg.promo.image; prev.style.display = ""; } else prev.style.display = "none";
+  }
+  function renderCoupon() {
+    $("couponEnabled").checked = !!cfg.coupon.enabled;
+    $("couponCode").value = cfg.coupon.code || "";
+    $("couponLabel").value = cfg.coupon.label || "";
+    $("couponTerms").value = cfg.coupon.terms || "";
+  }
+  function renderBackend() {
+    if ($("beProvider")) $("beProvider").value = cfg.backend.provider || "none";
+    if ($("beUrl")) $("beUrl").value = cfg.backend.url || "";
+  }
+  function renderConfig() {
+    if ($("tierName")) $("tierName").value = cfg.tier || "";
+    renderPresets(); renderFeatures(); renderPromo(); renderCoupon(); renderBackend(); renderPerms();
+  }
+  function wireConfig() {
+    if ($("beProvider")) $("beProvider").addEventListener("change", (e) => (cfg.backend.provider = e.target.value));
+    if ($("beUrl")) $("beUrl").addEventListener("input", (e) => (cfg.backend.url = e.target.value.trim()));
+    if ($("tierName")) $("tierName").addEventListener("input", () => (cfg.tier = $("tierName").value));
+    $("promoEnabled").addEventListener("change", (e) => (cfg.promo.enabled = e.target.checked));
+    $("promoShade").addEventListener("change", (e) => (cfg.promo.shadeId = e.target.value));
+    $("promoTitle").addEventListener("input", (e) => (cfg.promo.title = e.target.value));
+    $("promoMsg").addEventListener("input", (e) => (cfg.promo.message = e.target.value));
+    $("promoUpload").addEventListener("click", () => $("promoFile").click());
+    $("promoFile").addEventListener("change", (e) => {
+      const f = e.target.files && e.target.files[0]; e.target.value = "";
+      if (!f) return;
+      const rd = new FileReader();
+      rd.onload = () => { cfg.promo.image = rd.result; renderPromo(); toast("Poster loaded"); };
+      rd.readAsDataURL(f);
+    });
+    $("promoClear").addEventListener("click", () => { cfg.promo.image = ""; renderPromo(); });
+    $("couponEnabled").addEventListener("change", (e) => (cfg.coupon.enabled = e.target.checked));
+    $("couponCode").addEventListener("input", (e) => (cfg.coupon.code = e.target.value));
+    $("couponLabel").addEventListener("input", (e) => (cfg.coupon.label = e.target.value));
+    $("couponTerms").addEventListener("input", (e) => (cfg.coupon.terms = e.target.value));
+  }
+
+  /* ---- consolidated analytics ---- */
+  function renderAnalytics() {
+    const db = A.load();
+    const agg = A.consolidate(db);
+    const t = agg.totals;
+    const captures = (t.photo || 0) + (t.video || 0);
+    const nLoc = Object.keys(agg.perLocation).length;
+    $("kpis").innerHTML =
+      D.kpi("Activations", D.fmt(nLoc), "locations & events") +
+      D.kpi("Sessions", D.fmt(t.sessions), "network total") +
+      D.kpi("Try-ons", D.fmt(t.tryon), "all SKUs") +
+      D.kpi("Captures", D.fmt(captures), "photo + video") +
+      D.kpi("Analyses", D.fmt(t.analysis), "consultations") +
+      D.kpi("Avg dwell", D.dwellStr(agg.dwellN ? Math.round(agg.dwellMs / agg.dwellN / 1000) : 0), "per session") +
+      D.kpi("Leads", D.fmt(t.leads || 0), "opted-in") +
+      D.kpi("Shares", D.fmt(t.share), "social cards");
+    const heatEl = $("heat"); if (heatEl) heatEl.innerHTML = D.heat(agg.perHour);
+
+    const rows = Object.keys(agg.perLocation).map((id) => agg.perLocation[id])
+      .sort((a, b) => b.tryon - a.tryon);
+    $("locTable").querySelector("tbody").innerHTML = rows.length ? rows.map((r) =>
+      `<tr><td>${r.meta.name}</td><td><span class="pill-tag ${r.meta.type}">${r.meta.type}</span></td>` +
+      `<td class="num">${D.fmt(r.sessions)}</td><td class="num">${D.fmt(r.tryon)}</td>` +
+      `<td class="num">${D.fmt(r.captures)}</td><td class="num">${D.fmt(r.analysis)}</td>` +
+      `<td>${r.lastSeen ? new Date(r.lastSeen).toLocaleDateString() : "—"}</td></tr>`
+    ).join("") : `<tr><td colspan="7" style="color:var(--muted)">No data yet — import location exports or load demo data.</td></tr>`;
+
+    const skus = D.topSkus(agg.perSku, 12);
+    $("skuBars").innerHTML = skus.length ? D.bars(skus) : `<p class="hint" style="color:var(--muted)">No product data yet.</p>`;
+
+    const byLoc = rows.map((r) => ({ label: r.meta.name, value: r.tryon, color: r.meta.type === "event" ? "#B8942F" : r.meta.type === "web" ? "#5A78A0" : "#5F7D2E" }));
+    $("byLoc").innerHTML = byLoc.length ? D.bars(byLoc) : "";
+    const u = agg.undertone || {};
+    $("undertone").innerHTML = D.bars([
+      { label: "Warm", value: u.warm || 0, color: "#B8942F" },
+      { label: "Cool", value: u.cool || 0, color: "#5A78A0" },
+      { label: "Neutral", value: u.neutral || 0, color: "#8FB24A" },
+    ]);
+    $("spark").innerHTML = D.spark(agg.perDay, "tryon");
+
+    const demo = !!db.locations["watsons-smnorth"];
+    $("demoBanner").style.display = demo ? "" : "none";
+  }
+
+  function boot() {
+    renderConfig();
+    wireConfig();
+    renderAnalytics();
+
+    $("savePerms").addEventListener("click", () => {
+      localStorage.setItem("icolorConfig", JSON.stringify(cfg));
+      toast("Saved — features, promo, coupon & client view updated on this device.");
+    });
+    $("downloadCfg").addEventListener("click", () => {
+      download("window.ICOLOR_DEFAULT_CONFIG = " + JSON.stringify(cfg, null, 2) + ";\n", "config.default.js", "js");
+      toast("Downloaded config.default.js");
+    });
+
+    $("importBtn").addEventListener("click", () => $("importFile").click());
+    $("importFile").addEventListener("change", (e) => {
+      const f = e.target.files && e.target.files[0]; e.target.value = "";
+      if (!f) return;
+      const rd = new FileReader();
+      rd.onload = () => {
+        try { A.mergeImport(JSON.parse(rd.result)); toast("Imported"); renderAnalytics(); }
+        catch (err) { toast("Import failed: " + err.message); }
+      };
+      rd.readAsText(f);
+    });
+    $("exportAll").addEventListener("click", () => { download(A.load(), "icolor-analytics-consolidated.json"); toast("Exported consolidated"); });
+    $("exportLeads").addEventListener("click", () => {
+      const csv = A.leadsCSV();
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "icolor-leads.csv"; document.body.appendChild(a); a.click(); a.remove();
+      toast("Exported leads CSV");
+    });
+    $("syncCloud").addEventListener("click", async () => {
+      if (!window.Backend || !cfg.backend || cfg.backend.provider !== "pocketbase" || !cfg.backend.url) { toast("Set & save a PocketBase URL first"); return; }
+      toast("Syncing from cloud…");
+      const db = await window.Backend.fetchAllLocations();
+      if (!db) { toast("Cloud sync failed — check URL/permissions"); return; }
+      A.save(db); toast("Synced from cloud"); renderAnalytics();
+    });
+    $("pushConfig").addEventListener("click", async () => {
+      const st = $("beStatus");
+      if (!window.Backend || cfg.backend.provider !== "pocketbase" || !cfg.backend.url) { st.textContent = "Set provider = PocketBase and a URL, then Save, first."; return; }
+      st.textContent = "Pushing config to the fleet…";
+      const ok = await window.Backend.pushConfig(cfg);
+      st.textContent = ok ? "Config pushed — mirrors pick it up on next load." : "Push failed — check URL/permissions.";
+    });
+    $("seed").addEventListener("click", () => { A.seedDemo(); toast("Demo data loaded"); renderAnalytics(); });
+    $("clear").addEventListener("click", () => {
+      if (!confirm("Clear ALL analytics on this device (every location)?")) return;
+      A.clearAll(); toast("Cleared"); renderAnalytics();
+    });
+  }
+
+  if ($("app").style.display !== "none") boot();
+})();

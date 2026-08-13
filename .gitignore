@@ -1,0 +1,10 @@
+# Claude Code local config
+.claude/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.log
+
+# Downloaded test/user captures
+assets/icolorplus-*
