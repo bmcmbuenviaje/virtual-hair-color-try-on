@@ -1,0 +1,14 @@
+{
+  "name": "iColor Plus — Hair Colour Try-On",
+  "short_name": "iColor Plus",
+  "description": "Live AR hair-colour try-on for iColor Plus by Great Lengths.",
+  "start_url": "index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0f0a",
+  "theme_color": "#0e0b14",
+  "icons": [
+    { "src": "assets/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 210" role="img" aria-label="iColor Plus — Shampoo-In Hair Color">
+  <defs>
+    <style>
+      .grn { fill: #5f7d2e; }
+      .gold { fill: #a3862b; }
+    </style>
+  </defs>
+  <!-- GREAT LENGTHS -->
+  <text x="180" y="46" text-anchor="middle" class="grn"
+        font-family="Georgia, 'Times New Roman', serif" font-style="italic"
+        font-weight="600" font-size="22" letter-spacing="2">GREAT LENGTH<tspan font-size="24">§</tspan></text>
+  <!-- iColor -->
+  <text x="150" y="132" text-anchor="middle" class="grn"
+        font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="96">iColor</text>
+  <!-- registered mark -->
+  <text x="286" y="78" class="grn" font-family="Georgia, serif" font-size="20">&#174;</text>
+  <!-- plus (script) -->
+  <text x="238" y="158" class="gold"
+        font-family="'Segoe Script','Brush Script MT','Snell Roundhand',cursive"
+        font-style="italic" font-weight="600" font-size="62">plus</text>
+  <!-- tagline -->
+  <text x="150" y="176" text-anchor="middle" class="grn"
+        font-family="Georgia, 'Times New Roman', serif" font-size="15.5"
+        letter-spacing="2.5">SHAMPOO-IN HAIR COLOR</text>
+</svg>
