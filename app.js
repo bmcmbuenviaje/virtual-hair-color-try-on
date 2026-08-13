@@ -1542,6 +1542,7 @@ async function buildLandscapeCard(a) {
   cv.width = W;
   cv.height = H;
   const c = cv.getContext("2d");
+  const PL = CONFIG.printLayout || {};
   const logo = await loadImage(logoDataURL).catch(() => null);
   const dateStr = new Date().toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
   const sans = "'Segoe UI', system-ui, sans-serif";
@@ -1550,8 +1551,8 @@ async function buildLandscapeCard(a) {
 
   // Header band
   const hg = c.createLinearGradient(0, 0, W, 0);
-  hg.addColorStop(0, "#5f7d2e");
-  hg.addColorStop(1, "#b8942f");
+  hg.addColorStop(0, PL.accentFrom || "#5f7d2e");
+  hg.addColorStop(1, PL.accentTo || "#b8942f");
   c.fillStyle = hg;
   c.fillRect(0, 0, W, 160);
   roundRect(c, 50, 30, 360, 100, 16);
@@ -1566,8 +1567,8 @@ async function buildLandscapeCard(a) {
   c.fillStyle = "#fff";
   c.textAlign = "right";
   c.textBaseline = "alphabetic";
-  c.font = "700 46px Georgia, serif";
-  c.fillText("Hair Colour Analysis", W - 50, 78);
+  c.font = "700 40px Georgia, serif";
+  c.fillText(PL.title || "Personalized Hair Colour Analysis", W - 50, 76);
   c.font = "400 26px " + sans;
   c.fillText(dateStr, W - 50, 120);
   c.textAlign = "left";
@@ -1615,30 +1616,33 @@ async function buildLandscapeCard(a) {
   c.fillText("Previewing: " + selectedShade.name, bx, by - 6);
 
   // Brighten panel (right of hero)
-  const gx = 980, gy = 195, gw = W - gx - 60, gh = 420;
-  c.fillStyle = "#f2f5ea";
-  roundRect(c, gx, gy, gw, gh, 18);
-  c.fill();
-  c.fillStyle = "#5f7d2e";
-  c.font = "700 30px " + sans;
-  c.fillText("MAKE IT BRIGHTER / LIVELIER", gx + 30, gy + 52);
-  c.fillStyle = "#1a1a1a";
-  c.font = "600 26px " + sans;
-  let ty = wrapText(c, a.brightening.headline, gx + 30, gy + 100, gw - 60, 36, 3);
-  c.fillStyle = "#4a4a4a";
-  c.font = "400 23px " + sans;
-  ty += 10;
-  for (const tip of a.brightening.tips.slice(0, 2)) {
-    ty = wrapText(c, "•  " + tip, gx + 30, ty, gw - 60, 31, 3) + 8;
+  if (PL.showBrighten !== false) {
+    const gx = 980, gy = 195, gw = W - gx - 60, gh = 420;
+    c.fillStyle = "#f2f5ea";
+    roundRect(c, gx, gy, gw, gh, 18);
+    c.fill();
+    c.fillStyle = PL.accentFrom || "#5f7d2e";
+    c.font = "700 30px " + sans;
+    c.fillText("MAKE IT BRIGHTER / LIVELIER", gx + 30, gy + 52);
+    c.fillStyle = "#1a1a1a";
+    c.font = "600 26px " + sans;
+    let ty = wrapText(c, a.brightening.headline, gx + 30, gy + 100, gw - 60, 36, 3);
+    c.fillStyle = "#4a4a4a";
+    c.font = "400 23px " + sans;
+    ty += 10;
+    for (const tip of a.brightening.tips.slice(0, 2)) {
+      ty = wrapText(c, "•  " + tip, gx + 30, ty, gw - 60, 31, 3) + 8;
+    }
   }
 
   // Shade strip: 3 matches + 2 bold picks
+  if (PL.showMatches !== false) {
   const strip = a.recs.slice(0, 3).map((r) => ({ ...r, tag: "MATCH" }))
     .concat(a.statements.slice(0, 2).map((r) => ({ ...r, tag: "BOLD" })));
-  c.fillStyle = "#5f7d2e";
+  c.fillStyle = PL.accentFrom || "#5f7d2e";
   c.font = "700 30px " + sans;
   c.fillText("YOUR MATCHES", 60, 685);
-  c.fillStyle = "#b8942f";
+  c.fillStyle = PL.accentTo || "#b8942f";
   c.fillText("+  BOLD PICKS", 340, 685);
 
   const n = strip.length, gap = 20, sx0 = 60, availW = W - 120;
@@ -1676,6 +1680,7 @@ async function buildLandscapeCard(a) {
     c.fillStyle = r.achievable ? "#4a6321" : "#8a6a1e";
     fitLeft(c, "● " + (r.tag || (r.achievable ? "Direct colour" : "Needs lightening")) + (r.achievable ? "" : " · lift"), x, ly, tW);
   });
+  } // showMatches
 
   // Coupon / voucher (printed on the A5 report)
   if (FEATURES.coupon && CONFIG.coupon && CONFIG.coupon.enabled) {
@@ -1708,7 +1713,7 @@ async function buildLandscapeCard(a) {
 
   // Footer
   const fy = H - 150;
-  c.strokeStyle = "#b8942f";
+  c.strokeStyle = PL.accentTo || "#b8942f";
   c.lineWidth = 3;
   c.beginPath();
   c.moveTo(60, fy);
@@ -1719,9 +1724,9 @@ async function buildLandscapeCard(a) {
   c.fillStyle = "#666";
   c.font = "400 22px " + sans;
   wrapText(c,
-    "Apply per pack & patch-test first · Refresh every 4–6 weeks with the matching iColor Plus shampoo-in shade · Bleach gradually with a bond-builder. Digital estimate from your photo — not a professional diagnosis.",
+    PL.footer || "Apply per pack & patch-test first · Refresh every 4–6 weeks with the matching iColor Plus shampoo-in shade. Digital estimate from your photo — not a professional diagnosis.",
     60 + flw + 34, fy + 44, W - 60 - (60 + flw + 34), 30, 3);
-  c.fillStyle = "#5f7d2e";
+  c.fillStyle = PL.accentFrom || "#5f7d2e";
   c.font = "700 22px " + sans;
   c.textAlign = "right";
   c.fillText("iColor Plus · Great Lengths PH", W - 60, H - 26);

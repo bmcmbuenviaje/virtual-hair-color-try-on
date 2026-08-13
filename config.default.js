@@ -73,6 +73,16 @@ window.ICOLOR_DEFAULT_CONFIG = {
   // Voucher / coupon printed on the A5 analysis report.
   coupon: { enabled: false, code: "", label: "In-store offer", terms: "" },
 
+  // A5 print report design (edited in the client admin when 'print' is enabled).
+  printLayout: {
+    title: "Personalized Hair Colour Analysis",
+    accentFrom: "#5f7d2e",
+    accentTo: "#b8942f",
+    footer: "iColor Plus · Shampoo-In Hair Colour · Great Lengths Philippines. Digital estimate from your photo, not a professional diagnosis. Always patch-test.",
+    showBrighten: true,   // show the "make it brighter" panel
+    showMatches: true,    // show the shade-strip (matches + bold picks)
+  },
+
   // Opt-in lead capture (consent only — stored locally, exported as CSV by Super Admin).
   leads: {
     enabled: false,

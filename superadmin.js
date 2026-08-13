@@ -43,6 +43,7 @@
     ALLF.forEach((k) => { if (typeof cfg.features[k] !== "boolean") cfg.features[k] = false; });
     cfg.promo = Object.assign({ enabled: false, shadeId: "", title: "Shade of the Week", message: "", image: "" }, cfg.promo || {});
     cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "" }, cfg.coupon || {});
+    cfg.printLayout = Object.assign({ title: "Personalized Hair Colour Analysis", accentFrom: "#5f7d2e", accentTo: "#b8942f", footer: "", showBrighten: true, showMatches: true }, cfg.printLayout || {});
     cfg.backend = Object.assign({ provider: "none", url: "" }, cfg.backend || {});
     return cfg;
   }
@@ -56,9 +57,13 @@
 
   /* ---- gate ---- */
   function unlock() {
-    const sa = (resolved().superAdmin || {});
+    // Accept the baked default creds OR a saved override — a stale override
+    // must never lock out the real (config.default.js) super-admin login.
+    const def = (window.ICOLOR_DEFAULT_CONFIG && window.ICOLOR_DEFAULT_CONFIG.superAdmin) || {};
+    const over = (resolved().superAdmin || {});
     const u = ($("gu").value || "").trim(), p = $("gp").value || "";
-    if (u === (sa.username || "superadmin") && p === (sa.password || "mineski")) {
+    const ok = (sa) => sa && sa.username && u === sa.username && p === (sa.password || "");
+    if (ok(def) || ok(over) || (u === "superadmin" && p === "superadmin")) {
       sessionStorage.setItem("icolorSuperOk", "1");
       $("gate").style.display = "none"; $("app").style.display = ""; boot();
     } else $("ge").textContent = "Incorrect credentials.";
@@ -111,50 +116,74 @@
       })
     );
   }
-  function renderPromo() {
-    $("promoEnabled").checked = !!cfg.promo.enabled;
-    const shades = (cfg.shades || []).filter((s) => s.hex);
-    $("promoShade").innerHTML = `<option value="">— none —</option>` + shades.map((s) => `<option value="${s.id}" ${cfg.promo.shadeId === s.id ? "selected" : ""}>${s.name}</option>`).join("");
-    $("promoTitle").value = cfg.promo.title || "";
-    $("promoMsg").value = cfg.promo.message || "";
-    const prev = $("promoPrev");
-    if (cfg.promo.image) { prev.src = cfg.promo.image; prev.style.display = ""; } else prev.style.display = "none";
-  }
-  function renderCoupon() {
-    $("couponEnabled").checked = !!cfg.coupon.enabled;
-    $("couponCode").value = cfg.coupon.code || "";
-    $("couponLabel").value = cfg.coupon.label || "";
-    $("couponTerms").value = cfg.coupon.terms || "";
-  }
   function renderBackend() {
     if ($("beProvider")) $("beProvider").value = cfg.backend.provider || "none";
     if ($("beUrl")) $("beUrl").value = cfg.backend.url || "";
   }
+  /* ---- promo / coupon / print override editors (edit content on behalf of the client) ---- */
+  function renderContentEditors() {
+    if ($("promoEnabled")) {
+      $("promoEnabled").checked = !!cfg.promo.enabled;
+      const shades = (cfg.shades || []).filter((s) => s.hex);
+      $("promoShade").innerHTML = `<option value="">— none —</option>` + shades.map((s) => `<option value="${s.id}" ${cfg.promo.shadeId === s.id ? "selected" : ""}>${s.name}</option>`).join("");
+      $("promoTitle").value = cfg.promo.title || "";
+      $("promoMsg").value = cfg.promo.message || "";
+      const pv = $("promoPrev");
+      if (cfg.promo.image) { pv.src = cfg.promo.image; pv.style.display = ""; } else pv.style.display = "none";
+    }
+    if ($("couponEnabled")) {
+      $("couponEnabled").checked = !!cfg.coupon.enabled;
+      $("couponCode").value = cfg.coupon.code || "";
+      $("couponLabel").value = cfg.coupon.label || "";
+      $("couponTerms").value = cfg.coupon.terms || "";
+    }
+    if ($("plTitle")) {
+      $("plTitle").value = cfg.printLayout.title || "";
+      $("plFrom").value = cfg.printLayout.accentFrom || "#5f7d2e";
+      $("plTo").value = cfg.printLayout.accentTo || "#b8942f";
+      $("plFooter").value = cfg.printLayout.footer || "";
+      $("plBrighten").checked = cfg.printLayout.showBrighten !== false;
+      $("plMatches").checked = cfg.printLayout.showMatches !== false;
+    }
+  }
+  function wireContentEditors() {
+    const on = (id, ev, fn) => { const el = $(id); if (el) el.addEventListener(ev, fn); };
+    on("promoEnabled", "change", (e) => (cfg.promo.enabled = e.target.checked));
+    on("promoShade", "change", (e) => (cfg.promo.shadeId = e.target.value));
+    on("promoTitle", "input", (e) => (cfg.promo.title = e.target.value));
+    on("promoMsg", "input", (e) => (cfg.promo.message = e.target.value));
+    on("promoUpload", "click", () => $("promoFile").click());
+    on("promoFile", "change", (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return; const rd = new FileReader(); rd.onload = () => { cfg.promo.image = rd.result; renderContentEditors(); }; rd.readAsDataURL(f); });
+    on("promoClear", "click", () => { cfg.promo.image = ""; renderContentEditors(); });
+    on("couponEnabled", "change", (e) => (cfg.coupon.enabled = e.target.checked));
+    on("couponCode", "input", (e) => (cfg.coupon.code = e.target.value));
+    on("couponLabel", "input", (e) => (cfg.coupon.label = e.target.value));
+    on("couponTerms", "input", (e) => (cfg.coupon.terms = e.target.value));
+    on("plTitle", "input", (e) => (cfg.printLayout.title = e.target.value));
+    on("plFrom", "input", (e) => (cfg.printLayout.accentFrom = e.target.value));
+    on("plTo", "input", (e) => (cfg.printLayout.accentTo = e.target.value));
+    on("plFooter", "input", (e) => (cfg.printLayout.footer = e.target.value));
+    on("plBrighten", "change", (e) => (cfg.printLayout.showBrighten = e.target.checked));
+    on("plMatches", "change", (e) => (cfg.printLayout.showMatches = e.target.checked));
+  }
   function renderConfig() {
     if ($("tierName")) $("tierName").value = cfg.tier || "";
-    renderPresets(); renderFeatures(); renderPromo(); renderCoupon(); renderBackend(); renderPerms();
+    renderPresets(); renderFeatures(); renderBackend(); renderPerms(); renderContentEditors();
   }
   function wireConfig() {
+    wireContentEditors();
     if ($("beProvider")) $("beProvider").addEventListener("change", (e) => (cfg.backend.provider = e.target.value));
     if ($("beUrl")) $("beUrl").addEventListener("input", (e) => (cfg.backend.url = e.target.value.trim()));
     if ($("tierName")) $("tierName").addEventListener("input", () => (cfg.tier = $("tierName").value));
-    $("promoEnabled").addEventListener("change", (e) => (cfg.promo.enabled = e.target.checked));
-    $("promoShade").addEventListener("change", (e) => (cfg.promo.shadeId = e.target.value));
-    $("promoTitle").addEventListener("input", (e) => (cfg.promo.title = e.target.value));
-    $("promoMsg").addEventListener("input", (e) => (cfg.promo.message = e.target.value));
-    $("promoUpload").addEventListener("click", () => $("promoFile").click());
-    $("promoFile").addEventListener("change", (e) => {
-      const f = e.target.files && e.target.files[0]; e.target.value = "";
-      if (!f) return;
-      const rd = new FileReader();
-      rd.onload = () => { cfg.promo.image = rd.result; renderPromo(); toast("Poster loaded"); };
-      rd.readAsDataURL(f);
-    });
-    $("promoClear").addEventListener("click", () => { cfg.promo.image = ""; renderPromo(); });
-    $("couponEnabled").addEventListener("change", (e) => (cfg.coupon.enabled = e.target.checked));
-    $("couponCode").addEventListener("input", (e) => (cfg.coupon.code = e.target.value));
-    $("couponLabel").addEventListener("input", (e) => (cfg.coupon.label = e.target.value));
-    $("couponTerms").addEventListener("input", (e) => (cfg.coupon.terms = e.target.value));
+    // Tabs
+    document.querySelectorAll("#tabs button").forEach((b) =>
+      b.addEventListener("click", () => {
+        document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("on", x === b));
+        const cfgT = b.dataset.tab === "cfg";
+        $("tabCfg").style.display = cfgT ? "" : "none";
+        $("tabAn").style.display = cfgT ? "none" : "";
+      })
+    );
   }
 
   /* ---- consolidated analytics ---- */

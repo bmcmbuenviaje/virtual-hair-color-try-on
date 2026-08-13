@@ -67,7 +67,48 @@
   </div>
 
   <div class="a-card" style="border-color:rgba(184,148,47,0.4)">
-    <p style="margin:0;font-size:13px;color:var(--muted)">Package tier &amp; feature switches are managed by <b style="color:var(--accent-2)">Mineski (Super Admin)</b>. You can manage colours and export a build below.</p>
+    <p style="margin:0;font-size:13px;color:var(--muted)">Package tier &amp; feature switches are managed by <b style="color:var(--accent-2)">Super Admin</b>. Below you can manage colours, the promo banner, coupon and print design for the features you have.</p>
+  </div>
+
+  <div class="a-card" id="card-promo">
+    <h2>Promo banner <span class="muted">— shade of the week</span></h2>
+    <div class="perm" style="margin-bottom:12px;width:max-content"><input type="checkbox" id="promoEnabled" /> Show promo banner on the start screen</div>
+    <div class="row" style="gap:14px;flex-wrap:wrap;align-items:flex-end">
+      <div class="field" style="min-width:180px"><label>Featured shade</label><select id="promoShade"></select></div>
+      <div class="field" style="flex:1;min-width:200px"><label>Title</label><input id="promoTitle" type="text" placeholder="Shade of the Week" /></div>
+    </div>
+    <div class="field" style="margin-top:10px"><label>Message</label><input id="promoMsg" type="text" placeholder="Try Burgundy this week — 20% off in-store." /></div>
+    <div class="row" style="gap:10px;margin-top:12px;align-items:center;flex-wrap:wrap">
+      <button id="promoUpload" class="btn ghost sm">⬆ Upload poster</button>
+      <input id="promoFile" type="file" accept="image/*" hidden />
+      <button id="promoClear" class="btn ghost sm">Clear poster</button>
+      <img id="promoPrev" style="height:64px;border-radius:8px;border:1px solid var(--ring);display:none" />
+      <span class="hint" style="color:var(--muted);font-size:12px">A poster replaces the styled banner card.</span>
+    </div>
+  </div>
+
+  <div class="a-card" id="card-coupon">
+    <h2>Coupon / voucher <span class="muted">— on the A5 report</span></h2>
+    <div class="perm" style="margin-bottom:12px;width:max-content"><input type="checkbox" id="couponEnabled" /> Print a coupon on the analysis report</div>
+    <div class="row" style="gap:14px;flex-wrap:wrap">
+      <div class="field" style="min-width:150px"><label>Code</label><input id="couponCode" type="text" placeholder="ICOLOR20" /></div>
+      <div class="field" style="min-width:180px"><label>Label</label><input id="couponLabel" type="text" placeholder="In-store offer" /></div>
+      <div class="field" style="flex:1;min-width:200px"><label>Terms</label><input id="couponTerms" type="text" placeholder="20% off any iColor Plus SKU. Valid 30 days." /></div>
+    </div>
+  </div>
+
+  <div class="a-card" id="card-print">
+    <h2>Print (A5) design <span class="muted">— analysis report</span></h2>
+    <div class="row" style="gap:14px;flex-wrap:wrap;align-items:flex-end">
+      <div class="field" style="flex:1;min-width:220px"><label>Report title</label><input id="plTitle" type="text" placeholder="Personalized Hair Colour Analysis" /></div>
+      <div class="field"><label>Header from</label><input id="plFrom" type="color" style="width:52px;height:38px;padding:0;border:none;background:none" /></div>
+      <div class="field"><label>Header to</label><input id="plTo" type="color" style="width:52px;height:38px;padding:0;border:none;background:none" /></div>
+    </div>
+    <div class="field" style="margin-top:10px"><label>Footer note</label><input id="plFooter" type="text" /></div>
+    <div class="row" style="gap:16px;margin-top:12px;flex-wrap:wrap">
+      <label class="perm" style="width:max-content"><input type="checkbox" id="plBrighten" /> Show “make it brighter” panel</label>
+      <label class="perm" style="width:max-content"><input type="checkbox" id="plMatches" /> Show shade-match strip</label>
+    </div>
   </div>
 
   <div class="a-card" id="card-shades">
