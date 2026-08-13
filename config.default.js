@@ -18,7 +18,7 @@ window.ICOLOR_DEFAULT_CONFIG = {
 
   // Super Admin (Mineski internal): controls the client's admin view and sees
   // consolidated analytics across ALL activations. Separate credentials.
-  superAdmin: { username: "mineski", password: "mineski" },
+  superAdmin: { username: "conrad", password: "conrad91" },
 
   // This deployment's location tag — every try-on is recorded against it.
   // type: "store" | "event" | "web". Set per store/event via the Analytics page.
