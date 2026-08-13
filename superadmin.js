@@ -58,7 +58,7 @@
   function unlock() {
     const sa = (resolved().superAdmin || {});
     const u = ($("gu").value || "").trim(), p = $("gp").value || "";
-    if (u === (sa.username || "superadmin") && p === (sa.password || "mineski")) {
+    if (u === (sa.username || "superadmin") && p === (sa.password || "superadmin")) {
       sessionStorage.setItem("icolorSuperOk", "1");
       $("gate").style.display = "none"; $("app").style.display = ""; boot();
     } else $("ge").textContent = "Incorrect credentials.";
@@ -111,50 +111,27 @@
       })
     );
   }
-  function renderPromo() {
-    $("promoEnabled").checked = !!cfg.promo.enabled;
-    const shades = (cfg.shades || []).filter((s) => s.hex);
-    $("promoShade").innerHTML = `<option value="">— none —</option>` + shades.map((s) => `<option value="${s.id}" ${cfg.promo.shadeId === s.id ? "selected" : ""}>${s.name}</option>`).join("");
-    $("promoTitle").value = cfg.promo.title || "";
-    $("promoMsg").value = cfg.promo.message || "";
-    const prev = $("promoPrev");
-    if (cfg.promo.image) { prev.src = cfg.promo.image; prev.style.display = ""; } else prev.style.display = "none";
-  }
-  function renderCoupon() {
-    $("couponEnabled").checked = !!cfg.coupon.enabled;
-    $("couponCode").value = cfg.coupon.code || "";
-    $("couponLabel").value = cfg.coupon.label || "";
-    $("couponTerms").value = cfg.coupon.terms || "";
-  }
   function renderBackend() {
     if ($("beProvider")) $("beProvider").value = cfg.backend.provider || "none";
     if ($("beUrl")) $("beUrl").value = cfg.backend.url || "";
   }
   function renderConfig() {
     if ($("tierName")) $("tierName").value = cfg.tier || "";
-    renderPresets(); renderFeatures(); renderPromo(); renderCoupon(); renderBackend(); renderPerms();
+    renderPresets(); renderFeatures(); renderBackend(); renderPerms();
   }
   function wireConfig() {
     if ($("beProvider")) $("beProvider").addEventListener("change", (e) => (cfg.backend.provider = e.target.value));
     if ($("beUrl")) $("beUrl").addEventListener("input", (e) => (cfg.backend.url = e.target.value.trim()));
     if ($("tierName")) $("tierName").addEventListener("input", () => (cfg.tier = $("tierName").value));
-    $("promoEnabled").addEventListener("change", (e) => (cfg.promo.enabled = e.target.checked));
-    $("promoShade").addEventListener("change", (e) => (cfg.promo.shadeId = e.target.value));
-    $("promoTitle").addEventListener("input", (e) => (cfg.promo.title = e.target.value));
-    $("promoMsg").addEventListener("input", (e) => (cfg.promo.message = e.target.value));
-    $("promoUpload").addEventListener("click", () => $("promoFile").click());
-    $("promoFile").addEventListener("change", (e) => {
-      const f = e.target.files && e.target.files[0]; e.target.value = "";
-      if (!f) return;
-      const rd = new FileReader();
-      rd.onload = () => { cfg.promo.image = rd.result; renderPromo(); toast("Poster loaded"); };
-      rd.readAsDataURL(f);
-    });
-    $("promoClear").addEventListener("click", () => { cfg.promo.image = ""; renderPromo(); });
-    $("couponEnabled").addEventListener("change", (e) => (cfg.coupon.enabled = e.target.checked));
-    $("couponCode").addEventListener("input", (e) => (cfg.coupon.code = e.target.value));
-    $("couponLabel").addEventListener("input", (e) => (cfg.coupon.label = e.target.value));
-    $("couponTerms").addEventListener("input", (e) => (cfg.coupon.terms = e.target.value));
+    // Tabs
+    document.querySelectorAll("#tabs button").forEach((b) =>
+      b.addEventListener("click", () => {
+        document.querySelectorAll("#tabs button").forEach((x) => x.classList.toggle("on", x === b));
+        const cfgT = b.dataset.tab === "cfg";
+        $("tabCfg").style.display = cfgT ? "" : "none";
+        $("tabAn").style.display = cfgT ? "none" : "";
+      })
+    );
   }
 
   /* ---- consolidated analytics ---- */

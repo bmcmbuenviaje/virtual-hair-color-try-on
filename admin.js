@@ -61,6 +61,56 @@
   }
 
   let cfg = resolveCurrent();
+  cfg.promo = Object.assign({ enabled: false, shadeId: "", title: "Shade of the Week", message: "", image: "" }, cfg.promo || {});
+  cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "" }, cfg.coupon || {});
+  cfg.printLayout = Object.assign({ title: "Personalized Hair Colour Analysis", accentFrom: "#5f7d2e", accentTo: "#b8942f", footer: "", showBrighten: true, showMatches: true }, cfg.printLayout || {});
+
+  function renderContentEditors() {
+    if ($("promoEnabled")) {
+      $("promoEnabled").checked = !!cfg.promo.enabled;
+      const shades = (cfg.shades || []).filter((s) => s.hex);
+      $("promoShade").innerHTML = `<option value="">— none —</option>` + shades.map((s) => `<option value="${s.id}" ${cfg.promo.shadeId === s.id ? "selected" : ""}>${s.name}</option>`).join("");
+      $("promoTitle").value = cfg.promo.title || "";
+      $("promoMsg").value = cfg.promo.message || "";
+      const pv = $("promoPrev");
+      if (cfg.promo.image) { pv.src = cfg.promo.image; pv.style.display = ""; } else pv.style.display = "none";
+    }
+    if ($("couponEnabled")) {
+      $("couponEnabled").checked = !!cfg.coupon.enabled;
+      $("couponCode").value = cfg.coupon.code || "";
+      $("couponLabel").value = cfg.coupon.label || "";
+      $("couponTerms").value = cfg.coupon.terms || "";
+    }
+    if ($("plTitle")) {
+      $("plTitle").value = cfg.printLayout.title || "";
+      $("plFrom").value = cfg.printLayout.accentFrom || "#5f7d2e";
+      $("plTo").value = cfg.printLayout.accentTo || "#b8942f";
+      $("plFooter").value = cfg.printLayout.footer || "";
+      $("plBrighten").checked = cfg.printLayout.showBrighten !== false;
+      $("plMatches").checked = cfg.printLayout.showMatches !== false;
+    }
+  }
+  function wireContentEditors() {
+    const on = (id, ev, fn) => { const el = $(id); if (el) el.addEventListener(ev, fn); };
+    on("promoEnabled", "change", (e) => (cfg.promo.enabled = e.target.checked));
+    on("promoShade", "change", (e) => (cfg.promo.shadeId = e.target.value));
+    on("promoTitle", "input", (e) => (cfg.promo.title = e.target.value));
+    on("promoMsg", "input", (e) => (cfg.promo.message = e.target.value));
+    on("promoUpload", "click", () => $("promoFile").click());
+    on("promoFile", "change", (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return; const rd = new FileReader(); rd.onload = () => { cfg.promo.image = rd.result; renderContentEditors(); }; rd.readAsDataURL(f); });
+    on("promoClear", "click", () => { cfg.promo.image = ""; renderContentEditors(); });
+    on("couponEnabled", "change", (e) => (cfg.coupon.enabled = e.target.checked));
+    on("couponCode", "input", (e) => (cfg.coupon.code = e.target.value));
+    on("couponLabel", "input", (e) => (cfg.coupon.label = e.target.value));
+    on("couponTerms", "input", (e) => (cfg.coupon.terms = e.target.value));
+    on("plTitle", "input", (e) => (cfg.printLayout.title = e.target.value));
+    on("plFrom", "input", (e) => (cfg.printLayout.accentFrom = e.target.value));
+    on("plTo", "input", (e) => (cfg.printLayout.accentTo = e.target.value));
+    on("plFooter", "input", (e) => (cfg.printLayout.footer = e.target.value));
+    on("plBrighten", "change", (e) => (cfg.printLayout.showBrighten = e.target.checked));
+    on("plMatches", "change", (e) => (cfg.printLayout.showMatches = e.target.checked));
+  }
+  wireContentEditors();
 
   /* -------- passcode gate -------- */
   function tryUnlock() {
@@ -197,6 +247,10 @@
     hide("card-features", ca.showFeatures);
     hide("card-shades", ca.showShades);
     hide("card-export", ca.showExport);
+    const F = cfg.features || {};
+    hide("card-promo", !!F.promo);
+    hide("card-coupon", !!F.coupon);
+    hide("card-print", !!F.print);
     const al = $("analyticsLink"); if (al) al.style.display = ca.showAnalytics ? "" : "none";
     const sb = $("save"); const rb = $("reset");
     if (ca.readOnly) {
@@ -212,6 +266,7 @@
     renderFeatures();
     renderShades();
     renderPreview();
+    renderContentEditors();
     applyClientPerms();
   }
 

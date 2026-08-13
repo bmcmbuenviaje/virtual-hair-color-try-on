@@ -1,6 +1,6 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>iColor Plus — Super Admin (Mineski)</title>
+<title>iColor Plus — Super Admin</title>
 <link rel="stylesheet" href="styles.css" />
 <style>
   body { background: var(--bg); color: var(--text); font-family: "Segoe UI", system-ui, sans-serif; }
@@ -8,13 +8,15 @@
   .gate .box { background: var(--panel); border: 1px solid var(--ring); border-radius: 16px; padding: 26px; width: 340px; max-width: 90vw; text-align: center; }
   .gate input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--ring); background: rgba(0,0,0,0.3); color: var(--text); margin: 8px 0; font-size: 15px; text-align: center; }
   .gate .err { color: #ff8f8f; font-size: 13px; min-height: 16px; }
-  .badge-super { display: inline-block; font-size: 10px; font-weight: 800; letter-spacing: 1px; color: #2a220a; background: linear-gradient(135deg, var(--accent-2), #e6c674); padding: 3px 10px; border-radius: 999px; }
+  .tabs { display: inline-flex; border: 1px solid var(--ring); border-radius: 999px; overflow: hidden; margin: 16px 0 8px; }
+  .tabs button { border: none; background: transparent; color: var(--muted); padding: 9px 22px; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .tabs button.on { background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; }
 </style>
 
 <div id="gate" class="gate">
   <div class="box">
-    <div class="badge-super">MINESKI · SUPER ADMIN</div>
-    <p class="hint" style="color:var(--muted);font-size:13px;margin-top:12px">Restricted. Consolidated analytics & client-view controls.</p>
+    <h2 style="margin:0 0 4px;color:var(--accent-2)">Super Admin</h2>
+    <p class="hint" style="color:var(--muted);font-size:13px;margin-top:8px">Restricted. Consolidated analytics &amp; global controls.</p>
     <input id="gu" type="text" placeholder="Username" autocomplete="off" />
     <input id="gp" type="password" placeholder="Password" autocomplete="off" />
     <div id="ge" class="err"></div>
@@ -25,8 +27,8 @@
 <div id="app" class="dash-wrap" style="display:none">
   <div class="dash-head">
     <div>
-      <h1>Super Admin <span class="badge-super">MINESKI</span></h1>
-      <p class="sub">Consolidated across all activations — visible here only.</p>
+      <h1>Super Admin</h1>
+      <p class="sub">Global configuration &amp; consolidated analytics — visible here only.</p>
     </div>
     <div class="row" style="gap:8px">
       <a class="btn ghost" href="admin.html">Client admin</a>
@@ -34,116 +36,101 @@
     </div>
   </div>
 
-  <div class="a-card">
-    <h2>Package tier <span class="muted">— sets the feature switches</span></h2>
-    <div class="row"><label class="inline">Tier name:</label><input id="tierName" type="text" class="num" style="width:170px" /></div>
-    <div class="row presets" id="presets" style="margin-top:12px"></div>
+  <div class="tabs" id="tabs">
+    <button data-tab="cfg" class="on">Configuration</button>
+    <button data-tab="an">Analytics</button>
   </div>
 
-  <div class="a-card">
-    <h2>Features <span class="muted">— Super Admin only</span></h2>
-    <div class="feat-grid" id="features"></div>
-  </div>
-
-  <div class="a-card">
-    <h2>Promo banner <span class="muted">— shade of the week</span></h2>
-    <div class="perm" style="margin-bottom:12px;width:max-content"><input type="checkbox" id="promoEnabled" /> Show promo banner on the start screen</div>
-    <div class="row" style="gap:14px;flex-wrap:wrap;align-items:flex-end">
-      <div class="field" style="min-width:180px"><label>Featured shade</label><select id="promoShade"></select></div>
-      <div class="field" style="flex:1;min-width:200px"><label>Title</label><input id="promoTitle" type="text" placeholder="Shade of the Week" /></div>
-    </div>
-    <div class="field" style="margin-top:10px"><label>Message</label><input id="promoMsg" type="text" placeholder="Try Burgundy this week — 20% off in-store." /></div>
-    <div class="row" style="gap:10px;margin-top:12px;align-items:center;flex-wrap:wrap">
-      <button id="promoUpload" class="btn ghost sm">⬆ Upload poster</button>
-      <input id="promoFile" type="file" accept="image/*" hidden />
-      <button id="promoClear" class="btn ghost sm">Clear poster</button>
-      <img id="promoPrev" style="height:64px;border-radius:8px;border:1px solid var(--ring);display:none" />
-      <span class="hint" style="color:var(--muted);font-size:12px">Optional. A poster replaces the styled banner card.</span>
-    </div>
-  </div>
-
-  <div class="a-card">
-    <h2>Coupon / voucher <span class="muted">— printed on the A5 report</span></h2>
-    <div class="perm" style="margin-bottom:12px;width:max-content"><input type="checkbox" id="couponEnabled" /> Print a coupon on the analysis report</div>
-    <div class="row" style="gap:14px;flex-wrap:wrap">
-      <div class="field" style="min-width:150px"><label>Code</label><input id="couponCode" type="text" placeholder="ICOLOR20" /></div>
-      <div class="field" style="min-width:180px"><label>Label</label><input id="couponLabel" type="text" placeholder="In-store offer" /></div>
-      <div class="field" style="flex:1;min-width:200px"><label>Terms</label><input id="couponTerms" type="text" placeholder="20% off any iColor Plus SKU. Valid 30 days." /></div>
-    </div>
-  </div>
-
-  <div class="a-card">
-    <h2>Live backend <span class="muted">— real-time sync & fleet</span></h2>
-    <p class="hint" style="color:var(--muted);font-size:12.5px;margin:-4px 0 12px">Optional. Self-hosted PocketBase (see POCKETBASE.md). When set, devices mirror their location data + leads to the cloud and you can consolidate live and push config to the fleet.</p>
-    <div class="row" style="gap:14px;flex-wrap:wrap;align-items:flex-end">
-      <div class="field" style="min-width:150px"><label>Provider</label><select id="beProvider"><option value="none">None (localStorage)</option><option value="pocketbase">PocketBase</option></select></div>
-      <div class="field" style="flex:1;min-width:240px"><label>Backend URL</label><input id="beUrl" type="text" placeholder="https://icolor.pockethost.io" /></div>
-      <button id="pushConfig" class="btn ghost">Push config to fleet</button>
-    </div>
-    <div id="beStatus" class="hint" style="color:var(--muted);font-size:12px;margin-top:8px"></div>
-  </div>
-
-  <div class="a-card">
-    <h2>Client admin view — what the client can see</h2>
-    <p class="hint" style="color:var(--muted);font-size:12.5px;margin:-4px 0 12px">Toggle the sections the client's admin console shows.</p>
-    <div class="perm-grid" id="perms"></div>
-  </div>
-
-  <div class="save-bar dash-wrap" style="padding-left:0;padding-right:0">
-    <button id="savePerms" class="btn">Save to this device</button>
-    <button id="downloadCfg" class="btn ghost">⬇ Download config.default.js</button>
-    <span class="hint" style="align-self:center;color:var(--muted)">Applies to the app on this device; download to bake a build.</span>
-  </div>
-
-  <div id="demoBanner" class="demo-banner" style="display:none;margin-top:18px">Sample demo data across 4 locations. Import real location exports to replace/add.</div>
-
-  <div class="kpi-row" id="kpis"></div>
-
-  <div class="a-card">
-    <h2>Locations <span class="muted">/ activations</span></h2>
-    <div style="overflow-x:auto">
-      <table class="loc-table" id="locTable"><thead><tr>
-        <th>Location</th><th>Type</th><th class="num">Sessions</th><th class="num">Try-ons</th><th class="num">Captures</th><th class="num">Analyses</th><th>Last activity</th>
-      </tr></thead><tbody></tbody></table>
-    </div>
-  </div>
-
-  <div class="panel-grid">
+  <!-- ===== Configuration tab ===== -->
+  <div id="tabCfg">
     <div class="a-card">
-      <h2>Top products <span class="muted">network-wide</span></h2>
-      <div id="skuBars"></div>
+      <h2>Package tier <span class="muted">— sets the feature switches</span></h2>
+      <div class="row"><label class="inline">Tier name:</label><input id="tierName" type="text" class="num" style="width:170px" /></div>
+      <div class="row presets" id="presets" style="margin-top:12px"></div>
     </div>
-    <div>
+
+    <div class="a-card">
+      <h2>Features <span class="muted">— Super Admin only</span></h2>
+      <p class="hint" style="color:var(--muted);font-size:12.5px;margin:-4px 0 12px">Turning a feature on lets the client edit its content (promo banner, coupon, print design) in their own admin.</p>
+      <div class="feat-grid" id="features"></div>
+    </div>
+
+    <div class="a-card">
+      <h2>Live backend <span class="muted">— real-time sync &amp; fleet</span></h2>
+      <p class="hint" style="color:var(--muted);font-size:12.5px;margin:-4px 0 12px">Optional. Self-hosted PocketBase (see POCKETBASE.md). When set, devices mirror their data + leads to the cloud; you consolidate live and push config to the fleet.</p>
+      <div class="row" style="gap:14px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="min-width:150px"><label>Provider</label><select id="beProvider"><option value="none">None (localStorage)</option><option value="pocketbase">PocketBase</option></select></div>
+        <div class="field" style="flex:1;min-width:240px"><label>Backend URL</label><input id="beUrl" type="text" placeholder="https://icolor.pockethost.io" /></div>
+        <button id="pushConfig" class="btn ghost">Push config to fleet</button>
+      </div>
+      <div id="beStatus" class="hint" style="color:var(--muted);font-size:12px;margin-top:8px"></div>
+    </div>
+
+    <div class="a-card">
+      <h2>Client admin view <span class="muted">— what the client can see</span></h2>
+      <p class="hint" style="color:var(--muted);font-size:12.5px;margin:-4px 0 12px">Toggle the sections the client's admin console shows.</p>
+      <div class="perm-grid" id="perms"></div>
+    </div>
+
+    <div class="save-bar dash-wrap" style="padding-left:0;padding-right:0">
+      <button id="savePerms" class="btn">Save to this device</button>
+      <button id="downloadCfg" class="btn ghost">⬇ Download config.default.js</button>
+      <span class="hint" style="align-self:center;color:var(--muted)">Applies to the app on this device; download to bake a build.</span>
+    </div>
+  </div>
+
+  <!-- ===== Analytics tab ===== -->
+  <div id="tabAn" style="display:none">
+    <div id="demoBanner" class="demo-banner" style="display:none">Sample demo data across 4 locations. Import real location exports to replace/add.</div>
+
+    <div class="kpi-row" id="kpis"></div>
+
+    <div class="a-card">
+      <h2>Locations <span class="muted">/ activations</span></h2>
+      <div style="overflow-x:auto">
+        <table class="loc-table" id="locTable"><thead><tr>
+          <th>Location</th><th>Type</th><th class="num">Sessions</th><th class="num">Try-ons</th><th class="num">Captures</th><th class="num">Analyses</th><th>Last activity</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+    </div>
+
+    <div class="panel-grid">
       <div class="a-card">
-        <h2>Try-ons by location</h2>
-        <div id="byLoc"></div>
+        <h2>Top products <span class="muted">network-wide</span></h2>
+        <div id="skuBars"></div>
       </div>
-      <div class="a-card" style="margin-top:16px">
-        <h2>Undertone mix <span class="muted">all</span></h2>
-        <div id="undertone"></div>
+      <div>
+        <div class="a-card">
+          <h2>Try-ons by location</h2>
+          <div id="byLoc"></div>
+        </div>
+        <div class="a-card" style="margin-top:16px">
+          <h2>Undertone mix <span class="muted">all</span></h2>
+          <div id="undertone"></div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="a-card">
-    <h2>Busiest hours <span class="muted">network-wide / time of day</span></h2>
-    <div id="heat"></div>
-  </div>
+    <div class="a-card">
+      <h2>Busiest hours <span class="muted">network-wide / time of day</span></h2>
+      <div id="heat"></div>
+    </div>
 
-  <div class="a-card">
-    <h2>Network activity <span class="muted">14 days · try-ons</span></h2>
-    <div id="spark"></div>
-  </div>
+    <div class="a-card">
+      <h2>Network activity <span class="muted">14 days · try-ons</span></h2>
+      <div id="spark"></div>
+    </div>
 
-  <div class="a-card">
-    <div class="row" style="gap:10px;flex-wrap:wrap">
-      <button id="importBtn" class="btn">⬆ Import location export</button>
-      <input id="importFile" type="file" accept="application/json" hidden />
-      <button id="syncCloud" class="btn ghost">☁ Sync from cloud</button>
-      <button id="exportAll" class="btn ghost">⬇ Export consolidated</button>
-      <button id="exportLeads" class="btn ghost">⬇ Export leads (CSV)</button>
-      <button id="seed" class="btn ghost">Load demo data</button>
-      <button id="clear" class="btn danger">Clear all</button>
+    <div class="a-card">
+      <div class="row" style="gap:10px;flex-wrap:wrap">
+        <button id="importBtn" class="btn">⬆ Import location export</button>
+        <input id="importFile" type="file" accept="application/json" hidden />
+        <button id="syncCloud" class="btn ghost">☁ Sync from cloud</button>
+        <button id="exportAll" class="btn ghost">⬇ Export consolidated</button>
+        <button id="exportLeads" class="btn ghost">⬇ Export leads (CSV)</button>
+        <button id="seed" class="btn ghost">Load demo data</button>
+        <button id="clear" class="btn danger">Clear all</button>
+      </div>
     </div>
   </div>
 </div>
