@@ -49,14 +49,37 @@
       else await pb.collection("locations").create(rec);
     } catch (e) { /* offline / permissions — localStorage still holds it */ }
   }
+  // Durable lead outbox: a lead that can't reach the server right now (offline,
+  // server down) is queued in localStorage and retried on the next sync / when the
+  // device comes back online, so no opted-in lead is lost.
+  const OUTBOX = "icolorLeadOutbox";
+  function outboxLoad() { try { return JSON.parse(localStorage.getItem(OUTBOX) || "[]"); } catch (e) { return []; } }
+  function outboxSave(a) { try { localStorage.setItem(OUTBOX, JSON.stringify(a.slice(-1000))); } catch (e) {} }
+  function outboxAdd(rec) { const a = outboxLoad(); a.push(rec); outboxSave(a); }
+  function leadRecord(lead) {
+    return {
+      locId: window.Analytics.currentLocation().id,
+      email: lead.email || "", mobile: lead.mobile || "",
+      consent: !!lead.consent, ts: lead.ts || new Date().toISOString(),
+    };
+  }
   async function pushLead(lead) {
-    if (!pb || !window.Analytics) return;
-    try {
-      await pb.collection("leads").create({
-        locId: window.Analytics.currentLocation().id,
-        email: lead.email || "", mobile: lead.mobile || "", consent: !!lead.consent, ts: lead.ts || new Date().toISOString(),
-      });
-    } catch (e) {}
+    if (!window.Analytics) return false;
+    const rec = leadRecord(lead);
+    if (!pb) { if (!(await init())) { outboxAdd(rec); return false; } }
+    try { await pb.collection("leads").create(rec); return true; }
+    catch (e) { outboxAdd(rec); return false; }
+  }
+  async function flushLeadOutbox() {
+    if (!enabled()) return;
+    if (!pb) { if (!(await init())) return; }
+    const queue = outboxLoad();
+    if (!queue.length) return;
+    const remain = [];
+    for (const rec of queue) {
+      try { await pb.collection("leads").create(rec); } catch (e) { remain.push(rec); }
+    }
+    outboxSave(remain);
   }
   async function fetchAllLocations() {
     if (!pb) { if (!(await init())) return null; }
@@ -98,5 +121,5 @@
     } catch (e) { return false; }
   }
 
-  window.Backend = { enabled, init, upsertLocation, pushLead, fetchAllLocations, fetchScans, fetchConfig, pushConfig, beCfg };
+  window.Backend = { enabled, init, upsertLocation, pushLead, flushLeadOutbox, fetchAllLocations, fetchScans, fetchConfig, pushConfig, beCfg };
 })();

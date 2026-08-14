@@ -2755,8 +2755,10 @@ if (FEATURES.offline && "serviceWorker" in navigator && location.protocol !== "f
 if (window.Backend && window.Backend.enabled()) {
   window.Backend.init().then((ok) => {
     if (!ok) return;
-    setInterval(() => window.Backend.upsertLocation(), 30000);
+    setInterval(() => { window.Backend.upsertLocation(); window.Backend.flushLeadOutbox(); }, 30000);
     window.Backend.upsertLocation();
+    window.Backend.flushLeadOutbox(); // drain any leads captured while offline
+    window.addEventListener("online", () => window.Backend.flushLeadOutbox());
     if (!sessionStorage.getItem("icolorFleetPulled")) {
       sessionStorage.setItem("icolorFleetPulled", "1");
       window.Backend.fetchConfig().then((remote) => {
