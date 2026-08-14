@@ -201,6 +201,7 @@
       D.kpi("Analyses", D.fmt(t.analysis), "consultations") +
       D.kpi("Avg dwell", D.dwellStr(agg.dwellN ? Math.round(agg.dwellMs / agg.dwellN / 1000) : 0), "per session") +
       D.kpi("Leads", D.fmt(t.leads || 0), "opted-in") +
+      D.kpi("QR scans", D.fmt(t.qrscan || 0), D.fmt(t.qrshow || 0) + " hand-offs") +
       D.kpi("Shares", D.fmt(t.share), "social cards");
     const heatEl = $("heat"); if (heatEl) heatEl.innerHTML = D.heat(agg.perHour);
 
@@ -210,8 +211,9 @@
       `<tr><td>${r.meta.name}</td><td><span class="pill-tag ${r.meta.type}">${r.meta.type}</span></td>` +
       `<td class="num">${D.fmt(r.sessions)}</td><td class="num">${D.fmt(r.tryon)}</td>` +
       `<td class="num">${D.fmt(r.captures)}</td><td class="num">${D.fmt(r.analysis)}</td>` +
+      `<td class="num">${D.fmt(r.qrscan || 0)}</td>` +
       `<td>${r.lastSeen ? new Date(r.lastSeen).toLocaleDateString() : "—"}</td></tr>`
-    ).join("") : `<tr><td colspan="7" style="color:var(--muted)">No data yet — import location exports or load demo data.</td></tr>`;
+    ).join("") : `<tr><td colspan="8" style="color:var(--muted)">No data yet — import location exports or load demo data.</td></tr>`;
 
     const skus = D.topSkus(agg.perSku, 12);
     $("skuBars").innerHTML = skus.length ? D.bars(skus) : `<p class="hint" style="color:var(--muted)">No product data yet.</p>`;

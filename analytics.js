@@ -27,7 +27,32 @@
     try { over = JSON.parse(localStorage.getItem("icolorConfig") || "null"); } catch (e) {}
     return over && Array.isArray(over.shades) ? over : def;
   }
+  // A location-tagged deep link (from a scanned QR) overrides the device's own
+  // configured location, so a scan on a customer's phone — and anything they then
+  // do on it — attributes back to the kiosk's store. Persisted for the session so
+  // in-app navigation that drops the query string keeps the attribution.
+  let _urlLoc;
+  function urlLoc() {
+    if (_urlLoc !== undefined) return _urlLoc;
+    _urlLoc = null;
+    try {
+      const p = new URLSearchParams(location.search);
+      const id = p.get("loc");
+      if (id) {
+        _urlLoc = { id: id, name: p.get("locn") || id, type: p.get("loct") || "qr", qr: p.get("src") === "qr" };
+        sessionStorage.setItem("icolorUrlLoc", JSON.stringify(_urlLoc));
+      } else {
+        const s = sessionStorage.getItem("icolorUrlLoc");
+        if (s) _urlLoc = JSON.parse(s);
+      }
+    } catch (e) {}
+    return _urlLoc;
+  }
+  function isQrLanding() { const u = urlLoc(); return !!(u && u.qr); }
+
   function currentLocation() {
+    const u = urlLoc();
+    if (u && u.id) return { id: u.id, name: u.name, type: u.type };
     const cfg = resolvedConfig();
     return cfg.location || { id: "unassigned", name: "Unassigned", type: "web" };
   }
@@ -122,6 +147,9 @@
         tryon: L.totals.tryon || 0,
         captures: (L.totals.photo || 0) + (L.totals.video || 0),
         analysis: L.totals.analysis || 0,
+        qrscan: L.totals.qrscan || 0,
+        qrshow: L.totals.qrshow || 0,
+        leads: L.totals.leads || 0,
         lastSeen: L.lastSeen,
       };
     }
@@ -210,7 +238,7 @@
   window.Analytics = {
     KEY, load, save, track, addLead, leadsCSV, avgDwellSec, consolidate, mergeImport,
     exportLocation, seedDemo, clearAll, currentLocation, ensureLoc, shadeName, shadeHex,
-    dayKey, resolvedConfig,
+    dayKey, resolvedConfig, isQrLanding, urlLoc,
   };
 
   /* ---- shared render helpers for the dashboards ---- */

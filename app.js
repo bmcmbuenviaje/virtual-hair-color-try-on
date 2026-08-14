@@ -2791,20 +2791,78 @@ function renderPromoBanner() {
   box.style.cursor = "pointer";
   box.onclick = () => { if (p.shadeId) pendingPromoShade = p.shadeId; startBtn.click(); };
 }
+// Build the location-tagged deep link the QR encodes. Points at the PUBLIC base
+// (phones can't reach a tailnet address), carries this kiosk's location so a scan
+// attributes to the right store, and optionally the featured shade.
+function qrTargetUrl() {
+  const q = CONFIG.qr || {};
+  let base = (q.baseUrl || "").trim();
+  if (!base) base = location.href.split("#")[0].split("?")[0]; // fallback: current page
+  const p = new URLSearchParams();
+  try {
+    const loc = window.Analytics && window.Analytics.currentLocation();
+    if (loc && loc.id && loc.id !== "unassigned") {
+      p.set("loc", loc.id);
+      if (loc.name) p.set("locn", loc.name);
+      if (loc.type) p.set("loct", loc.type);
+    }
+  } catch (e) {}
+  p.set("src", "qr");
+  const promo = CONFIG.promo || {};
+  if (q.includeShade !== false && promo.enabled && promo.shadeId) p.set("shade", promo.shadeId);
+  return base + (base.indexOf("?") >= 0 ? "&" : "?") + p.toString();
+}
 function renderQR() {
   const box = $("qrBox"), img = $("qrImg");
   if (!box || !img) return;
   if (!(FEATURES.qr && window.qrcode)) { box.classList.add("hidden"); return; }
   try {
     const qr = window.qrcode(0, "M");
-    qr.addData(location.href.split("#")[0]);
+    qr.addData(qrTargetUrl());
     qr.make();
     img.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 1, scalable: true });
     box.classList.remove("hidden");
+    box.style.cursor = "pointer";
+    box.setAttribute("role", "button");
+    box.setAttribute("tabindex", "0");
+    box.setAttribute("aria-label", "Scan or tap to continue on your phone");
+    // Tap = hand-off intent, counted once per session on the kiosk (syncs via backend).
+    const handoff = () => {
+      if (!sessionStorage.getItem("icolorQrHandoff")) {
+        sessionStorage.setItem("icolorQrHandoff", "1");
+        trk("qrshow");
+      }
+      box.classList.toggle("qr-zoom");
+    };
+    box.onclick = handoff;
+    box.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handoff(); } };
   } catch (e) { box.classList.add("hidden"); }
+}
+// If THIS page was opened by scanning a kiosk QR, record the scan once and, when a
+// public scan-ping endpoint is configured, report it to the central server (the phone
+// isn't on the tailnet, so this is the only way the scan reaches consolidated analytics).
+function handleQrLanding() {
+  try {
+    const A = window.Analytics;
+    if (!A || !A.isQrLanding || !A.isQrLanding()) return;
+    if (sessionStorage.getItem("icolorQrCounted")) return;
+    sessionStorage.setItem("icolorQrCounted", "1");
+    trk("qrscan");
+    const url = ((CONFIG.qr || {}).scanPingUrl || "").trim();
+    if (url) {
+      const loc = A.currentLocation();
+      fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ loc: loc.id, name: loc.name, type: loc.type, ts: new Date().toISOString() }),
+        keepalive: true,
+      }).catch(() => {});
+    }
+  } catch (e) {}
 }
 renderPromoBanner();
 renderQR();
+handleQrLanding();
 
 window.addEventListener("pagehide", flushDwell);
 document.addEventListener("visibilitychange", () => {

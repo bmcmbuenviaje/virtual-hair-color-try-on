@@ -94,6 +94,15 @@ window.ICOLOR_DEFAULT_CONFIG = {
   // When url is set, analytics + leads sync live; otherwise localStorage is used.
   backend: { provider: "none", url: "", note: "" },
 
+  // "Scan to phone" QR. The QR encodes a location-tagged deep link so a scan on
+  // a customer's phone attributes back to THIS kiosk's store, and can be counted.
+  //   baseUrl     — the PUBLIC url the QR points to (phones can't reach a tailnet
+  //                 address, so set this to your GitHub Pages URL). Blank = current origin.
+  //   scanPingUrl — optional PUBLIC endpoint (Tailscale Funnel) that logs a real
+  //                 scan to the central server. Blank = scans counted on-phone only.
+  //   includeShade— also encode the featured promo shade so the phone opens on it.
+  qr: { baseUrl: "", scanPingUrl: "", includeShade: true },
+
   // Language. codes: "en" | "tl".
   lang: { default: "en", enabled: ["en", "tl"] },
 
