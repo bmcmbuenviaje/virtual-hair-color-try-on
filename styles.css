@@ -67,6 +67,9 @@ html, body {
 .qr-box #qrImg { background: #fff; padding: 8px; border-radius: 12px; line-height: 0; }
 .qr-box #qrImg svg, .qr-box #qrImg img { width: 116px; height: 116px; display: block; }
 .qr-cap { font-size: 12px; color: var(--muted); margin: 0; }
+.status-pill { font-size: 11px; font-weight: 800; letter-spacing: 0.3px; white-space: nowrap; }
+.status-pill.status-on { color: #6bbf59; }
+.status-pill.status-off { color: #c77; }
 /* Attract / idle mirror overlay */
 .attract-overlay { position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; cursor: pointer;
   background: radial-gradient(120% 80% at 50% 20%, rgba(0,0,0,0.05), rgba(0,0,0,0.55)); backdrop-filter: saturate(1.1); }

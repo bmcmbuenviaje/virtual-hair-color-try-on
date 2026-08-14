@@ -2942,6 +2942,29 @@ renderPromoBanner();
 renderQR();
 handleQrLanding();
 
+// Fleet heartbeat: stamp this device's build + refresh last-seen on every load,
+// so Super Admin can spot offline or out-of-date kiosks.
+try {
+  const A = window.Analytics;
+  if (A) {
+    const db = A.load();
+    const L = A.ensureLoc(db, A.currentLocation());
+    L.build = CONFIG.build || "";
+    L.lastSeen = new Date().toISOString();
+    A.save(db);
+  }
+} catch (e) {}
+// Show the build tag on the start-screen footer.
+try {
+  const f = document.querySelector(".disclaimer");
+  if (f && CONFIG.build) {
+    const s = document.createElement("span");
+    s.style.cssText = "display:block;opacity:.5;font-size:10px;margin-top:4px";
+    s.textContent = "Build " + CONFIG.build;
+    f.appendChild(s);
+  }
+} catch (e) {}
+
 window.addEventListener("pagehide", flushDwell);
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {

@@ -12,6 +12,10 @@ window.ICOLOR_DEFAULT_CONFIG = {
   // Package label (shown in the admin console only).
   tier: "All-in",
 
+  // Build/version tag — reported per kiosk to the fleet view so you can spot
+  // devices running an old build. Bump when you ship an update.
+  build: "2026.08.14",
+
   // Soft gate for the admin console. Passwords are stored as salted SHA-256 hashes
   // (not plaintext) so this file no longer leaks credentials via "View Source".
   // Still a client-side gate — for real security serve admin only on the tailnet

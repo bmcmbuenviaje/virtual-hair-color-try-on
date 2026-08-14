@@ -171,6 +171,7 @@
         qrscan: L.totals.qrscan || 0,
         qrshow: L.totals.qrshow || 0,
         leads: L.totals.leads || 0,
+        build: L.build || "",
         lastSeen: L.lastSeen,
       };
     }

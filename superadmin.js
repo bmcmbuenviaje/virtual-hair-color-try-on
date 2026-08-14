@@ -4,6 +4,18 @@
   const A = window.Analytics, D = window.Dash;
   const clone = (o) => JSON.parse(JSON.stringify(o));
 
+  // Fleet health: a kiosk is "online" if it reported (heartbeat/activity) recently.
+  const STALE_MIN = 60;
+  function isOnline(lastSeen) {
+    if (!lastSeen) return false;
+    return (Date.now() - new Date(lastSeen).getTime()) < STALE_MIN * 60000;
+  }
+  function onlinePill(lastSeen) {
+    return isOnline(lastSeen)
+      ? '<span class="status-pill status-on">● Online</span>'
+      : '<span class="status-pill status-off">● Offline</span>';
+  }
+
   const PERMS = [
     ["showShades", "Colour manager"],
     ["showExport", "Export / import build"],
@@ -206,7 +218,9 @@
     const t = agg.totals;
     const captures = (t.photo || 0) + (t.video || 0);
     const nLoc = Object.keys(agg.perLocation).length;
+    const nOnline = Object.keys(agg.perLocation).filter((id) => isOnline(agg.perLocation[id].lastSeen)).length;
     $("kpis").innerHTML =
+      D.kpi("Kiosks online", nOnline + "/" + nLoc, "seen < " + STALE_MIN + " min") +
       D.kpi("Activations", D.fmt(nLoc), "locations & events") +
       D.kpi("Sessions", D.fmt(t.sessions), "network total") +
       D.kpi("Try-ons", D.fmt(t.tryon), "all SKUs") +
@@ -233,8 +247,10 @@
       `<td class="num">${D.fmt(r.sessions)}</td><td class="num">${D.fmt(r.tryon)}</td>` +
       `<td class="num">${D.fmt(r.captures)}</td><td class="num">${D.fmt(r.analysis)}</td>` +
       `<td class="num">${D.fmt(r.qrscan || 0)}</td>` +
-      `<td>${r.lastSeen ? new Date(r.lastSeen).toLocaleDateString() : "—"}</td></tr>`
-    ).join("") : `<tr><td colspan="8" style="color:var(--muted)">No data yet — import location exports or load demo data.</td></tr>`;
+      `<td>${r.build ? r.build : "—"}</td>` +
+      `<td>${onlinePill(r.lastSeen)}</td>` +
+      `<td>${r.lastSeen ? new Date(r.lastSeen).toLocaleString() : "—"}</td></tr>`
+    ).join("") : `<tr><td colspan="10" style="color:var(--muted)">No data yet — import location exports or load demo data.</td></tr>`;
 
     const skus = D.topSkus(agg.perSku, 12);
     $("skuBars").innerHTML = skus.length ? D.bars(skus) : `<p class="hint" style="color:var(--muted)">No product data yet.</p>`;
