@@ -77,7 +77,6 @@ window.ICOLOR_DEFAULT_CONFIG = {
     image: "",            // uploaded poster as a data: URL (optional, overrides card)
   },
 
-  // Voucher / coupon printed on the A5 analysis report.
   // Coupon on the A5 report. unique:true prints a per-session code
   //   LOC3-CAMPAIGN-XXX  (3-letter location code + campaign shortcode + 3 random);
   //   `code` is the fallback when unique:false. `campaign` is an optional shortcode.
@@ -117,12 +116,11 @@ window.ICOLOR_DEFAULT_CONFIG = {
     includeShade: true,
   },
 
-  // Kiosk attract / idle "mirror" teaser: after idleMs with no interaction on the
-  // start screen, auto-start the live camera with a shade applied + a tap-to-start
-  // overlay (only if camera permission is already granted, so it never surprise-
-  // prompts). Off by default. shadeId = the teaser shade (blank = first shade).
-  // Attract mode is turned on/off by features.attract (Super Admin). These are just
-  // its tuning params: idle delay, teaser shade (blank = first), and the CTA text.
+  // Kiosk attract / idle "mirror" teaser: after idleMs of no interaction on the start
+  // screen, auto-start the live camera with a shade applied + a tap-to-start overlay
+  // (only if camera permission is already granted, so it never surprise-prompts).
+  // Turned on/off by features.attract (Super Admin); these are just the tuning params:
+  // idle delay, teaser shade (blank = first shade), and the call-to-action text.
   attract: { idleMs: 45000, shadeId: "", cta: "Tap to try your color" },
 
   // Language. codes: "en" | "tl".
