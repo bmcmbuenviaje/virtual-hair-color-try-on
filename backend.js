@@ -5,7 +5,7 @@
    Keeps localStorage as the source of truth (offline-safe) and, when a URL
    is set, mirrors the location snapshot + leads to PocketBase and lets Super
    Admin pull consolidated data + push config to the fleet.
-   Server is self-hosted by Mineski (see POCKETBASE.md).
+   Server is self-hosted (see POCKETBASE.md).
    ============================================================ */
 (function () {
   const SDK = "assets/vendor/pocketbase.umd.js";

@@ -1,4 +1,4 @@
-/* iColor Plus — Super Admin (Mineski): client-view controls + consolidated analytics */
+/* iColor Plus — Super Admin: client-view controls + consolidated analytics */
 (function () {
   const $ = (id) => document.getElementById(id);
   const A = window.Analytics, D = window.Dash;

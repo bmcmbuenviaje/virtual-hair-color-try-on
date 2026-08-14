@@ -265,7 +265,7 @@
     const al = $("analyticsLink"); if (al) al.style.display = ca.showAnalytics ? "" : "none";
     const sb = $("save"); const rb = $("reset");
     if (ca.readOnly) {
-      if (sb) { sb.disabled = true; sb.textContent = "View only (locked by Mineski)"; sb.style.opacity = 0.6; }
+      if (sb) { sb.disabled = true; sb.textContent = "View only (locked by Super Admin)"; sb.style.opacity = 0.6; }
       if (rb) { rb.disabled = true; rb.style.opacity = 0.6; }
     } else if (sb) { sb.disabled = false; sb.textContent = "Save to this device"; sb.style.opacity = 1; if (rb) { rb.disabled = false; rb.style.opacity = 1; } }
   }
