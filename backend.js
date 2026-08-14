@@ -8,7 +8,7 @@
    Server is self-hosted by Mineski (see POCKETBASE.md).
    ============================================================ */
 (function () {
-  const SDK = "https://cdn.jsdelivr.net/npm/pocketbase@0.21.5/dist/pocketbase.umd.js";
+  const SDK = "assets/vendor/pocketbase.umd.js";
   let pb = null, loading = null;
 
   function cfg() {
