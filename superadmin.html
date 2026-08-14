@@ -109,6 +109,13 @@
       </div>
     </div>
 
+    <div class="a-card" id="sa-card-qr">
+      <h2>QR deep link <span class="muted">— scan to phone</span></h2>
+      <p class="hint" style="color:var(--muted);font-size:12.5px;margin:-4px 0 12px">The QR encodes a location-tagged link. Phones can't reach a tailnet address, so the <b>base URL must be your PUBLIC (GitHub Pages) URL</b>. Scan-ping URL is the optional Tailscale Funnel endpoint that logs real scans.</p>
+      <div class="field" style="margin-bottom:10px"><label>Base URL (public)</label><input id="qrBaseUrl" type="text" placeholder="https://bmcmbuenviaje.github.io/virtual-hair-color-try-on/" /></div>
+      <div class="field"><label>Scan-ping URL (Funnel, optional)</label><input id="qrScanPing" type="text" placeholder="https://…ts.net:8443/scanping" /></div>
+    </div>
+
     <div class="a-card">
       <h2>Live backend <span class="muted">— real-time sync &amp; fleet</span></h2>
       <p class="hint" style="color:var(--muted);font-size:12.5px;margin:-4px 0 12px">Optional. Self-hosted PocketBase (see POCKETBASE.md). When set, devices mirror their data + leads to the cloud; you consolidate live and push config to the fleet.</p>

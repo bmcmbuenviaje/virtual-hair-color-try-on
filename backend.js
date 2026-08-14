@@ -86,7 +86,13 @@
     try {
       const list = await pb.collection("locations").getFullList({ sort: "-updated" });
       const db = { locations: {} };
-      list.forEach((r) => { try { db.locations[r.locId] = JSON.parse(r.data); } catch (e) {} });
+      list.forEach((r) => {
+        try {
+          const L = JSON.parse(r.data);
+          L.lastSync = r.updated || null; // server-side time of the kiosk's last sync (heartbeat)
+          db.locations[r.locId] = L;
+        } catch (e) {}
+      });
       return db;
     } catch (e) { return null; }
   }

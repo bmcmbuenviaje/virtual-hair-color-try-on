@@ -4,14 +4,18 @@
   const A = window.Analytics, D = window.Dash;
   const clone = (o) => JSON.parse(JSON.stringify(o));
 
-  // Fleet health: a kiosk is "online" if it reported (heartbeat/activity) recently.
-  const STALE_MIN = 60;
-  function isOnline(lastSeen) {
-    if (!lastSeen) return false;
-    return (Date.now() - new Date(lastSeen).getTime()) < STALE_MIN * 60000;
+  // Fleet health: online = the kiosk is currently CONNECTED and syncing to this
+  // server. Connected kiosks push a heartbeat every 30s (over Tailscale), so a
+  // sync within a few cycles means it's live — a powered-on but quiet kiosk never
+  // wrongly shows offline (no activity-based timeout). Offline = stopped syncing.
+  const ONLINE_WINDOW_MS = 3 * 60 * 1000; // ~6 missed 30s heartbeats
+  function lastContact(r) { return (r && (r.lastSync || r.lastSeen)) || null; }
+  function isOnline(r) {
+    const t = lastContact(r);
+    return !!t && (Date.now() - new Date(t).getTime()) < ONLINE_WINDOW_MS;
   }
-  function onlinePill(lastSeen) {
-    return isOnline(lastSeen)
+  function onlinePill(r) {
+    return isOnline(r)
       ? '<span class="status-pill status-on">● Online</span>'
       : '<span class="status-pill status-off">● Offline</span>';
   }
@@ -58,6 +62,7 @@
     cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true }, cfg.coupon || {});
     cfg.printLayout = Object.assign({ title: "Personalized Hair Colour Analysis", accentFrom: "#5f7d2e", accentTo: "#b8942f", footer: "", showBrighten: true, showMatches: true }, cfg.printLayout || {});
     cfg.attract = Object.assign({ idleMs: 45000, shadeId: "", cta: "Tap to try your color" }, cfg.attract || {});
+    cfg.qr = Object.assign({ baseUrl: "", scanPingUrl: "", includeShade: true }, cfg.qr || {});
     cfg.backend = Object.assign({ provider: "none", url: "" }, cfg.backend || {});
     return cfg;
   }
@@ -176,6 +181,10 @@
       $("attractShade").innerHTML = `<option value="">— first shade —</option>` + shades.map((s) => `<option value="${s.id}" ${cfg.attract.shadeId === s.id ? "selected" : ""}>${s.name}</option>`).join("");
       $("attractCta").value = cfg.attract.cta || "";
     }
+    if ($("qrBaseUrl")) {
+      $("qrBaseUrl").value = cfg.qr.baseUrl || "";
+      $("qrScanPing").value = cfg.qr.scanPingUrl || "";
+    }
   }
   function wireContentEditors() {
     const on = (id, ev, fn) => { const el = $(id); if (el) el.addEventListener(ev, fn); };
@@ -201,6 +210,8 @@
     on("attractIdle", "input", (e) => { const s = parseInt(e.target.value, 10); cfg.attract.idleMs = (s > 0 ? s : 45) * 1000; });
     on("attractShade", "change", (e) => (cfg.attract.shadeId = e.target.value));
     on("attractCta", "input", (e) => (cfg.attract.cta = e.target.value));
+    on("qrBaseUrl", "input", (e) => (cfg.qr.baseUrl = e.target.value.trim()));
+    on("qrScanPing", "input", (e) => (cfg.qr.scanPingUrl = e.target.value.trim()));
   }
   function renderConfig() {
     if ($("tierName")) $("tierName").value = cfg.tier || "";
@@ -229,9 +240,9 @@
     const t = agg.totals;
     const captures = (t.photo || 0) + (t.video || 0);
     const nLoc = Object.keys(agg.perLocation).length;
-    const nOnline = Object.keys(agg.perLocation).filter((id) => isOnline(agg.perLocation[id].lastSeen)).length;
+    const nOnline = Object.keys(agg.perLocation).filter((id) => isOnline(agg.perLocation[id])).length;
     $("kpis").innerHTML =
-      D.kpi("Kiosks online", nOnline + "/" + nLoc, "seen < " + STALE_MIN + " min") +
+      D.kpi("Kiosks online", nOnline + "/" + nLoc, "connected & syncing") +
       D.kpi("Activations", D.fmt(nLoc), "locations & events") +
       D.kpi("Sessions", D.fmt(t.sessions), "network total") +
       D.kpi("Try-ons", D.fmt(t.tryon), "all SKUs") +
@@ -259,7 +270,7 @@
       `<td class="num">${D.fmt(r.captures)}</td><td class="num">${D.fmt(r.analysis)}</td>` +
       `<td class="num">${D.fmt(r.qrscan || 0)}</td>` +
       `<td>${r.build ? r.build : "—"}</td>` +
-      `<td>${onlinePill(r.lastSeen)}</td>` +
+      `<td>${onlinePill(r)}</td>` +
       `<td>${r.lastSeen ? new Date(r.lastSeen).toLocaleString() : "—"}</td></tr>`
     ).join("") : `<tr><td colspan="10" style="color:var(--muted)">No data yet — import location exports or load demo data.</td></tr>`;
 

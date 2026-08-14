@@ -173,6 +173,7 @@
         leads: L.totals.leads || 0,
         build: L.build || "",
         lastSeen: L.lastSeen,
+        lastSync: L.lastSync || null,
       };
     }
     return agg;
