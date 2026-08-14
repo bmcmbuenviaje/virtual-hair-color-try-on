@@ -88,6 +88,7 @@
       { label: "Try-ons", value: t.tryon || 0, color: "#6E8F38" },
       { label: "Analyses", value: t.analysis || 0, color: "#8FB24A" },
       { label: "Captures", value: captures, color: "#B8942F" },
+      { label: "Leads", value: t.leads || 0, color: "#C9A227" },
       { label: "Shares", value: t.share || 0, color: "#E0C46A" },
       { label: "QR scans", value: t.qrscan || 0, color: "#5A78A0" },
     ]);

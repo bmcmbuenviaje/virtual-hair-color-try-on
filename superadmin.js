@@ -213,6 +213,14 @@
       D.kpi("QR scans", D.fmt(t.qrscan || 0), D.fmt(t.qrshow || 0) + " hand-offs") +
       D.kpi("Shares", D.fmt(t.share), "social cards");
     const heatEl = $("heat"); if (heatEl) heatEl.innerHTML = D.heat(agg.perHour);
+    const funnelEl = $("funnel");
+    if (funnelEl) funnelEl.innerHTML = D.bars([
+      { label: "Sessions", value: t.sessions || 0, color: "#5F7D2E" },
+      { label: "Try-ons", value: t.tryon || 0, color: "#6E8F38" },
+      { label: "Analyses", value: t.analysis || 0, color: "#8FB24A" },
+      { label: "Leads", value: t.leads || 0, color: "#B8942F" },
+      { label: "QR scans", value: t.qrscan || 0, color: "#5A78A0" },
+    ]);
 
     const rows = Object.keys(agg.perLocation).map((id) => agg.perLocation[id])
       .sort((a, b) => b.tryon - a.tryon);
