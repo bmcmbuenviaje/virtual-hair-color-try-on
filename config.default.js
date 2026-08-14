@@ -65,6 +65,7 @@ window.ICOLOR_DEFAULT_CONFIG = {
     getlook: true,     // "get this look" — match a shade from an inspo photo
     multilang: true,   // Tagalog / English toggle
     offline: true,     // offline PWA cache
+    attract: false,    // kiosk attract / idle camera-mirror teaser
   },
 
   // Shade-of-the-week promo banner (Super Admin sets; shows on the start screen).
@@ -120,7 +121,9 @@ window.ICOLOR_DEFAULT_CONFIG = {
   // start screen, auto-start the live camera with a shade applied + a tap-to-start
   // overlay (only if camera permission is already granted, so it never surprise-
   // prompts). Off by default. shadeId = the teaser shade (blank = first shade).
-  attract: { enabled: false, idleMs: 45000, shadeId: "", cta: "Tap to try your color" },
+  // Attract mode is turned on/off by features.attract (Super Admin). These are just
+  // its tuning params: idle delay, teaser shade (blank = first), and the CTA text.
+  attract: { idleMs: 45000, shadeId: "", cta: "Tap to try your color" },
 
   // Language. codes: "en" | "tl".
   lang: { default: "en", enabled: ["en", "tl"] },

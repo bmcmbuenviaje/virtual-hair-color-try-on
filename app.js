@@ -2758,14 +2758,14 @@ async function cameraGranted() {
   catch (e) { return false; }
 }
 function armIdle() {
-  if (!ATTRACT.enabled) return;
+  if (!FEATURES.attract) return;
   clearTimeout(_idleTimer);
   if (!attractActive && !startScreen.classList.contains("hidden")) {
     _idleTimer = setTimeout(enterAttract, ATTRACT.idleMs || 45000);
   }
 }
 async function enterAttract() {
-  if (!ATTRACT.enabled || attractActive) return;
+  if (!FEATURES.attract || attractActive) return;
   if (startScreen.classList.contains("hidden")) return; // only from the start screen
   if (!(await cameraGranted())) return;                 // never surprise-prompt
   try {
