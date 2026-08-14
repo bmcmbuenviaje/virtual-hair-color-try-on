@@ -215,6 +215,27 @@ function flushDwell() {
   }
 }
 
+/* ---- Per-session coupon code:  LOC3-CAMPAIGN?-XXX  ----
+   3-letter location code + optional campaign shortcode + 3 random alphanumerics
+   (ambiguous chars I/O/0/1 excluded). Generated once per session, printed on the
+   A5 report, and logged (locally + synced to the server) for reconciliation. */
+let _sessionCoupon = null;
+function couponCode() {
+  const cp = CONFIG.coupon || {};
+  if (cp.unique === false) return cp.code || "CODE"; // static code mode
+  if (_sessionCoupon) return _sessionCoupon;
+  const loc = (window.Analytics && window.Analytics.currentLocation()) || {};
+  const alnum = (s) => (s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const loc3 = (alnum(loc.code || loc.id || "LOC").slice(0, 3) || "LOC").padEnd(3, "X");
+  const camp = alnum(cp.campaign || "").slice(0, 12);
+  const AL = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no I, O, 0, 1
+  let rnd = ""; for (let i = 0; i < 3; i++) rnd += AL[Math.floor(Math.random() * AL.length)];
+  _sessionCoupon = [loc3, camp, rnd].filter(Boolean).join("-");
+  try { window.Analytics && window.Analytics.logCoupon && window.Analytics.logCoupon(_sessionCoupon, camp); } catch (e) {}
+  try { window.Backend && window.Backend.enabled() && window.Backend.pushCoupon && window.Backend.pushCoupon(_sessionCoupon, camp); } catch (e) {}
+  return _sessionCoupon;
+}
+
 /* ============================================================
    Recolor helpers
    ============================================================ */
@@ -1706,7 +1727,8 @@ async function buildLandscapeCard(a) {
     c.fillStyle = "#E0C46A";
     c.font = "800 30px " + sans;
     c.textAlign = "center";
-    c.fillText(CONFIG.coupon.code || "CODE", chipX + chipW / 2, cyy + chh / 2);
+    c.font = "800 26px " + sans;
+    c.fillText(couponCode(), chipX + chipW / 2, cyy + chh / 2);
     c.textAlign = "left";
     c.textBaseline = "alphabetic";
   }

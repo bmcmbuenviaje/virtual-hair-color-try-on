@@ -62,7 +62,7 @@
 
   let cfg = resolveCurrent();
   cfg.promo = Object.assign({ enabled: false, shadeId: "", title: "Shade of the Week", message: "", image: "" }, cfg.promo || {});
-  cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "" }, cfg.coupon || {});
+  cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true }, cfg.coupon || {});
   cfg.printLayout = Object.assign({ title: "Personalized Hair Colour Analysis", accentFrom: "#5f7d2e", accentTo: "#b8942f", footer: "", showBrighten: true, showMatches: true }, cfg.printLayout || {});
 
   function renderContentEditors() {
@@ -80,6 +80,8 @@
       $("couponCode").value = cfg.coupon.code || "";
       $("couponLabel").value = cfg.coupon.label || "";
       $("couponTerms").value = cfg.coupon.terms || "";
+      if ($("couponCampaign")) $("couponCampaign").value = cfg.coupon.campaign || "";
+      if ($("couponUnique")) $("couponUnique").checked = cfg.coupon.unique !== false;
     }
     if ($("plTitle")) {
       $("plTitle").value = cfg.printLayout.title || "";
@@ -103,6 +105,8 @@
     on("couponCode", "input", (e) => (cfg.coupon.code = e.target.value));
     on("couponLabel", "input", (e) => (cfg.coupon.label = e.target.value));
     on("couponTerms", "input", (e) => (cfg.coupon.terms = e.target.value));
+    on("couponCampaign", "input", (e) => (cfg.coupon.campaign = e.target.value));
+    on("couponUnique", "change", (e) => (cfg.coupon.unique = e.target.checked));
     on("plTitle", "input", (e) => (cfg.printLayout.title = e.target.value));
     on("plFrom", "input", (e) => (cfg.printLayout.accentFrom = e.target.value));
     on("plTo", "input", (e) => (cfg.printLayout.accentTo = e.target.value));

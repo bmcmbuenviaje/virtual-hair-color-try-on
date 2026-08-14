@@ -73,7 +73,10 @@ window.ICOLOR_DEFAULT_CONFIG = {
   },
 
   // Voucher / coupon printed on the A5 analysis report.
-  coupon: { enabled: false, code: "", label: "In-store offer", terms: "" },
+  // Coupon on the A5 report. unique:true prints a per-session code
+  //   LOC3-CAMPAIGN-XXX  (3-letter location code + campaign shortcode + 3 random);
+  //   `code` is the fallback when unique:false. `campaign` is an optional shortcode.
+  coupon: { enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true },
 
   // A5 print report design (edited in the client admin when 'print' is enabled).
   printLayout: {

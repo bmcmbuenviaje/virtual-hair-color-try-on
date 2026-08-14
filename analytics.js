@@ -62,7 +62,7 @@
       meta: meta,
       totals: { sessions: 0, tryon: 0, photo: 0, video: 0, analysis: 0, share: 0, leads: 0 },
       perSku: {}, perDay: {}, perHour: {}, undertone: { warm: 0, cool: 0, neutral: 0 }, hairLevel: {},
-      dwellMs: 0, dwellN: 0, leads: [], lastSeen: null,
+      dwellMs: 0, dwellN: 0, leads: [], coupons: [], lastSeen: null,
     };
   }
   function ensureLoc(db, loc) {
@@ -109,6 +109,27 @@
     L.totals.leads = (L.totals.leads || 0) + 1;
     L.lastSeen = new Date().toISOString();
     save(db);
+  }
+  // Issued coupon codes (unique per session). Stored locally and synced to the
+  // server via the location snapshot; Super Admin exports them for POS reconciliation.
+  function logCoupon(code, campaign) {
+    const db = load();
+    const L = ensureLoc(db, currentLocation());
+    L.coupons = L.coupons || [];
+    L.coupons.push({ code: code, campaign: campaign || "", ts: new Date().toISOString(), loc: L.meta.name });
+    L.totals.coupons = (L.totals.coupons || 0) + 1;
+    L.lastSeen = new Date().toISOString();
+    save(db);
+  }
+  function couponsCSV() {
+    const db = load();
+    const rows = [["Timestamp", "Location", "Campaign", "Code"]];
+    for (const id in db.locations) {
+      (db.locations[id].coupons || []).forEach((c) =>
+        rows.push([c.ts, c.loc || db.locations[id].meta.name, c.campaign || "", c.code || ""])
+      );
+    }
+    return rows.map((r) => r.map((f) => '"' + String(f).replace(/"/g, '""') + '"').join(",")).join("\n");
   }
   function leadsCSV() {
     const db = load();
@@ -236,7 +257,7 @@
   function shadeHex(id) { const s = (resolvedConfig().shades || []).find((x) => x.id === id); return s ? s.hex : "#888888"; }
 
   window.Analytics = {
-    KEY, load, save, track, addLead, leadsCSV, avgDwellSec, consolidate, mergeImport,
+    KEY, load, save, track, addLead, leadsCSV, logCoupon, couponsCSV, avgDwellSec, consolidate, mergeImport,
     exportLocation, seedDemo, clearAll, currentLocation, ensureLoc, shadeName, shadeHex,
     dayKey, resolvedConfig, isQrLanding, urlLoc,
   };
