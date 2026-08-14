@@ -99,6 +99,16 @@
       </div>
     </div>
 
+    <div class="a-card" id="sa-card-attract">
+      <h2>Attract / idle mirror <span class="muted">— tuning</span></h2>
+      <p class="hint" style="color:var(--muted);font-size:12.5px;margin:-4px 0 12px">Active when the “Attract / idle mirror” feature is on. After the idle delay with no interaction, the kiosk auto-starts a live camera teaser (needs camera permission already granted).</p>
+      <div class="row" style="gap:14px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="min-width:150px"><label>Idle delay (seconds)</label><input id="attractIdle" type="number" min="5" class="num" style="width:110px" /></div>
+        <div class="field" style="min-width:180px"><label>Teaser shade</label><select id="attractShade"></select></div>
+        <div class="field" style="flex:1;min-width:200px"><label>Call-to-action</label><input id="attractCta" type="text" placeholder="Tap to try your color" /></div>
+      </div>
+    </div>
+
     <div class="a-card">
       <h2>Live backend <span class="muted">— real-time sync &amp; fleet</span></h2>
       <p class="hint" style="color:var(--muted);font-size:12.5px;margin:-4px 0 12px">Optional. Self-hosted PocketBase (see POCKETBASE.md). When set, devices mirror their data + leads to the cloud; you consolidate live and push config to the fleet.</p>

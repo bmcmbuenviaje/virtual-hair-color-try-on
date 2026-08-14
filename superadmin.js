@@ -57,6 +57,7 @@
     cfg.promo = Object.assign({ enabled: false, shadeId: "", title: "Shade of the Week", message: "", image: "" }, cfg.promo || {});
     cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true }, cfg.coupon || {});
     cfg.printLayout = Object.assign({ title: "Personalized Hair Colour Analysis", accentFrom: "#5f7d2e", accentTo: "#b8942f", footer: "", showBrighten: true, showMatches: true }, cfg.printLayout || {});
+    cfg.attract = Object.assign({ idleMs: 45000, shadeId: "", cta: "Tap to try your color" }, cfg.attract || {});
     cfg.backend = Object.assign({ provider: "none", url: "" }, cfg.backend || {});
     return cfg;
   }
@@ -169,6 +170,12 @@
       $("plBrighten").checked = cfg.printLayout.showBrighten !== false;
       $("plMatches").checked = cfg.printLayout.showMatches !== false;
     }
+    if ($("attractIdle")) {
+      $("attractIdle").value = Math.round((cfg.attract.idleMs || 45000) / 1000);
+      const shades = (cfg.shades || []).filter((s) => s.hex);
+      $("attractShade").innerHTML = `<option value="">— first shade —</option>` + shades.map((s) => `<option value="${s.id}" ${cfg.attract.shadeId === s.id ? "selected" : ""}>${s.name}</option>`).join("");
+      $("attractCta").value = cfg.attract.cta || "";
+    }
   }
   function wireContentEditors() {
     const on = (id, ev, fn) => { const el = $(id); if (el) el.addEventListener(ev, fn); };
@@ -191,6 +198,9 @@
     on("plFooter", "input", (e) => (cfg.printLayout.footer = e.target.value));
     on("plBrighten", "change", (e) => (cfg.printLayout.showBrighten = e.target.checked));
     on("plMatches", "change", (e) => (cfg.printLayout.showMatches = e.target.checked));
+    on("attractIdle", "input", (e) => { const s = parseInt(e.target.value, 10); cfg.attract.idleMs = (s > 0 ? s : 45) * 1000; });
+    on("attractShade", "change", (e) => (cfg.attract.shadeId = e.target.value));
+    on("attractCta", "input", (e) => (cfg.attract.cta = e.target.value));
   }
   function renderConfig() {
     if ($("tierName")) $("tierName").value = cfg.tier || "";
