@@ -112,14 +112,21 @@
   }
   wireContentEditors();
 
-  /* -------- passcode gate -------- */
-  function tryUnlock() {
+  /* -------- passcode gate (salted SHA-256; no plaintext creds shipped) -------- */
+  async function sha256Hex(s) {
+    const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+    return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
+  }
+  async function checkCred(c, user, pass) {
+    if (!c || user !== (c.username || "admin")) return false;
+    if (c.passHash && c.salt) return (await sha256Hex(c.salt + pass)) === c.passHash;
+    const pw = c.password || c.passcode; // back-compat with older plaintext configs
+    return pw != null && pass === pw;
+  }
+  async function tryUnlock() {
     const user = ($("gateUser").value || "").trim();
     const pass = $("gatePass").value || "";
-    const A = (cfg.admin || {});
-    const okUser = A.username || "admin";
-    const okPass = A.password || A.passcode || "icolor"; // back-compat with old passcode-only configs
-    if (user === okUser && pass === okPass) {
+    if (await checkCred(cfg.admin || {}, user, pass)) {
       sessionStorage.setItem("icolorAdminOk", "1");
       $("gate").style.display = "none";
       $("app").style.display = "";

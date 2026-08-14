@@ -56,14 +56,23 @@
   }
 
   /* ---- gate ---- */
-  function unlock() {
-    // Accept the baked default creds OR a saved override — a stale override
-    // must never lock out the real (config.default.js) super-admin login.
+  async function sha256Hex(s) {
+    const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+    return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
+  }
+  async function checkCred(c, u, p) {
+    if (!c || !c.username || u !== c.username) return false;
+    if (c.passHash && c.salt) return (await sha256Hex(c.salt + p)) === c.passHash;
+    return c.password != null && p === c.password; // back-compat with older plaintext configs
+  }
+  async function unlock() {
+    // Accept the baked default creds OR a saved override — a stale override must
+    // never lock out the real (config.default.js) super-admin login. Salted hashes,
+    // so this page ships no plaintext password.
     const def = (window.ICOLOR_DEFAULT_CONFIG && window.ICOLOR_DEFAULT_CONFIG.superAdmin) || {};
     const over = (resolved().superAdmin || {});
     const u = ($("gu").value || "").trim(), p = $("gp").value || "";
-    const ok = (sa) => sa && sa.username && u === sa.username && p === (sa.password || "");
-    if (ok(def) || ok(over) || (u === "superadmin" && p === "superadmin")) {
+    if ((await checkCred(def, u, p)) || (await checkCred(over, u, p))) {
       sessionStorage.setItem("icolorSuperOk", "1");
       $("gate").style.display = "none"; $("app").style.display = ""; boot();
     } else $("ge").textContent = "Incorrect credentials.";

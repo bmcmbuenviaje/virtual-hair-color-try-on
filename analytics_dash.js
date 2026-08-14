@@ -21,10 +21,19 @@
   }
 
   /* ---- gate (client admin creds) ---- */
-  function unlock() {
-    const admin = (cfg().admin || {});
+  async function sha256Hex(s) {
+    const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+    return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
+  }
+  async function checkCred(c, u, p) {
+    if (!c || u !== (c.username || "admin")) return false;
+    if (c.passHash && c.salt) return (await sha256Hex(c.salt + p)) === c.passHash;
+    const pw = c.password || c.passcode; // back-compat with older plaintext configs
+    return pw != null && p === pw;
+  }
+  async function unlock() {
     const u = ($("gu").value || "").trim(), p = $("gp").value || "";
-    if (u === (admin.username || "admin") && p === (admin.password || admin.passcode || "icolor")) {
+    if (await checkCred(cfg().admin || {}, u, p)) {
       if ((cfg().clientAdmin || {}).showAnalytics === false) { $("ge").textContent = "Analytics is disabled for this account."; return; }
       sessionStorage.setItem("icolorAdminOk", "1");
       $("gate").style.display = "none"; $("app").style.display = ""; boot();

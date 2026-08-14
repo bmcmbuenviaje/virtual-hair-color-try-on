@@ -12,13 +12,15 @@ window.ICOLOR_DEFAULT_CONFIG = {
   // Package label (shown in the admin console only).
   tier: "All-in",
 
-  // Soft gate for the admin console (client-side only — NOT real security;
-  // credentials are visible in this file's source).
-  admin: { username: "conrad", password: "conrad" },
+  // Soft gate for the admin console. Passwords are stored as salted SHA-256 hashes
+  // (not plaintext) so this file no longer leaks credentials via "View Source".
+  // Still a client-side gate — for real security serve admin only on the tailnet
+  // or move auth to PocketBase. To change a password, recompute the hash:
+  //   sha256Hex(salt + newPassword)   (see the gate helpers in admin.js/superadmin.js).
+  admin: { username: "conrad", salt: "icp-admin-2f9a", passHash: "e6f297aa41b94e91d47e5c220a38c7676fdb65e3b0bb5c4a4e84a5c2e5ca0a56" },
 
-  // Super Admin (Mineski internal): controls the client's admin view and sees
-  // consolidated analytics across ALL activations. Separate credentials.
-  superAdmin: { username: "conrad", password: "conrad91" },
+  // Super Admin: controls the client's admin view and sees consolidated analytics.
+  superAdmin: { username: "conrad", salt: "icp-super-8c3d", passHash: "f5f5da86a0f623da734a67192c64372f61eedaa8b21b364374702741087bdcde" },
 
   // This deployment's location tag — every try-on is recorded against it.
   // type: "store" | "event" | "web". Set per store/event via the Analytics page.
