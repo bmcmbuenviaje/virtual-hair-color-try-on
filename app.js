@@ -2746,6 +2746,59 @@ startBtn.addEventListener("click", async () => {
 });
 
 /* ============================================================
+   Kiosk attract / idle "mirror" teaser
+   Reuses the normal camera pipeline; only runs if camera permission is already
+   granted (so it never surprise-prompts). Feature-flagged (off by default).
+   ============================================================ */
+const ATTRACT = CONFIG.attract || {};
+let attractActive = false, _idleTimer = null;
+const attractOverlay = $("attractOverlay");
+async function cameraGranted() {
+  try { const p = await navigator.permissions.query({ name: "camera" }); return p.state === "granted"; }
+  catch (e) { return false; }
+}
+function armIdle() {
+  if (!ATTRACT.enabled) return;
+  clearTimeout(_idleTimer);
+  if (!attractActive && !startScreen.classList.contains("hidden")) {
+    _idleTimer = setTimeout(enterAttract, ATTRACT.idleMs || 45000);
+  }
+}
+async function enterAttract() {
+  if (!ATTRACT.enabled || attractActive) return;
+  if (startScreen.classList.contains("hidden")) return; // only from the start screen
+  if (!(await cameraGranted())) return;                 // never surprise-prompt
+  try {
+    await ensureSegmenter();
+    await startCamera();
+    attractActive = true;
+    startScreen.classList.add("hidden");
+    appScreen.classList.remove("hidden");
+    initAppUIOnce();
+    staticMode = false; setStaticUI(false);
+    if (!running) { running = true; renderLoop(); }
+    const sh = SHADES.find((s) => s.id === ATTRACT.shadeId) || SHADES[0];
+    if (sh) selectShade(sh);
+    if ($("attractCta") && ATTRACT.cta) $("attractCta").textContent = ATTRACT.cta;
+    if (attractOverlay) attractOverlay.classList.remove("hidden");
+  } catch (e) { attractActive = false; } // no camera → stay on the start screen
+}
+function exitAttract() {
+  if (!attractActive) return;
+  attractActive = false;
+  if (attractOverlay) attractOverlay.classList.add("hidden");
+  trk("sessions"); // visitor is now engaging with a live session
+}
+if (attractOverlay) {
+  attractOverlay.addEventListener("pointerdown", exitAttract);
+  attractOverlay.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); exitAttract(); } });
+}
+["pointerdown", "keydown", "touchstart"].forEach((ev) =>
+  window.addEventListener(ev, () => { if (!attractActive) armIdle(); }, { passive: true })
+);
+armIdle();
+
+/* ============================================================
    Feature gating (package tiers from config)
    ============================================================ */
 function hideEl(el) { if (el) el.style.display = "none"; }
@@ -2777,10 +2830,11 @@ if (FEATURES.offline && "serviceWorker" in navigator && location.protocol !== "f
 if (window.Backend && window.Backend.enabled()) {
   window.Backend.init().then((ok) => {
     if (!ok) return;
-    setInterval(() => { window.Backend.upsertLocation(); window.Backend.flushLeadOutbox(); }, 30000);
+    const flush = () => { try { window.Backend.flushLeadOutbox && window.Backend.flushLeadOutbox(); } catch (e) {} };
+    setInterval(() => { window.Backend.upsertLocation(); flush(); }, 30000);
     window.Backend.upsertLocation();
-    window.Backend.flushLeadOutbox(); // drain any leads captured while offline
-    window.addEventListener("online", () => window.Backend.flushLeadOutbox());
+    flush(); // drain any leads captured while offline
+    window.addEventListener("online", flush);
     if (!sessionStorage.getItem("icolorFleetPulled")) {
       sessionStorage.setItem("icolorFleetPulled", "1");
       window.Backend.fetchConfig().then((remote) => {

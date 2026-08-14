@@ -67,6 +67,18 @@ html, body {
 .qr-box #qrImg { background: #fff; padding: 8px; border-radius: 12px; line-height: 0; }
 .qr-box #qrImg svg, .qr-box #qrImg img { width: 116px; height: 116px; display: block; }
 .qr-cap { font-size: 12px; color: var(--muted); margin: 0; }
+/* Attract / idle mirror overlay */
+.attract-overlay { position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  background: radial-gradient(120% 80% at 50% 20%, rgba(0,0,0,0.05), rgba(0,0,0,0.55)); backdrop-filter: saturate(1.1); }
+.attract-inner { position: relative; text-align: center; padding: 24px; }
+.attract-ring { width: 128px; height: 128px; margin: 0 auto 22px; border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.85); box-shadow: 0 0 0 0 rgba(224,196,106,0.7); animation: attractPulse 2s ease-out infinite; }
+@keyframes attractPulse { 0% { box-shadow: 0 0 0 0 rgba(224,196,106,0.6); } 70% { box-shadow: 0 0 0 34px rgba(224,196,106,0); } 100% { box-shadow: 0 0 0 0 rgba(224,196,106,0); } }
+.attract-cta { color: #fff; font-size: 30px; font-weight: 800; margin: 0 0 6px; text-shadow: 0 2px 14px rgba(0,0,0,0.6); animation: attractFade 2.4s ease-in-out infinite; }
+.attract-sub { color: rgba(255,255,255,0.85); font-size: 14px; letter-spacing: 0.4px; margin: 0; text-shadow: 0 1px 8px rgba(0,0,0,0.6); }
+@keyframes attractFade { 0%,100% { opacity: 0.75; } 50% { opacity: 1; } }
+.attract-overlay:focus-visible { outline: 3px solid var(--accent-2); outline-offset: -6px; }
+@media (prefers-reduced-motion: reduce) { .attract-ring, .attract-cta { animation: none; } }
 .qr-box.qr-zoom #qrImg svg, .qr-box.qr-zoom #qrImg img { width: 232px; height: 232px; transition: width .15s, height .15s; }
 .qr-box:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 4px; border-radius: 14px; }
 .lang-btn { position: absolute; top: 14px; right: 14px; z-index: 3; border: 1px solid var(--ring); background: rgba(255,255,255,0.08); color: var(--text); font-weight: 800; font-size: 12px; letter-spacing: 0.5px; padding: 6px 12px; border-radius: 999px; cursor: pointer; }

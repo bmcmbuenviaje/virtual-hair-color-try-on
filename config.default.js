@@ -112,6 +112,12 @@ window.ICOLOR_DEFAULT_CONFIG = {
     includeShade: true,
   },
 
+  // Kiosk attract / idle "mirror" teaser: after idleMs with no interaction on the
+  // start screen, auto-start the live camera with a shade applied + a tap-to-start
+  // overlay (only if camera permission is already granted, so it never surprise-
+  // prompts). Off by default. shadeId = the teaser shade (blank = first shade).
+  attract: { enabled: false, idleMs: 45000, shadeId: "", cta: "Tap to try your color" },
+
   // Language. codes: "en" | "tl".
   lang: { default: "en", enabled: ["en", "tl"] },
 
