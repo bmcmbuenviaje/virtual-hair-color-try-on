@@ -101,7 +101,11 @@ window.ICOLOR_DEFAULT_CONFIG = {
   //   scanPingUrl — optional PUBLIC endpoint (Tailscale Funnel) that logs a real
   //                 scan to the central server. Blank = scans counted on-phone only.
   //   includeShade— also encode the featured promo shade so the phone opens on it.
-  qr: { baseUrl: "", scanPingUrl: "", includeShade: true },
+  qr: {
+    baseUrl: "https://bmcmbuenviaje.github.io/virtual-hair-color-try-on/",
+    scanPingUrl: "https://desktop-s8s5jql.tail38606b.ts.net:8443/scanping",
+    includeShade: true,
+  },
 
   // Language. codes: "en" | "tl".
   lang: { default: "en", enabled: ["en", "tl"] },

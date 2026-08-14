@@ -269,7 +269,18 @@
       toast("Syncing from cloud…");
       const db = await window.Backend.fetchAllLocations();
       if (!db) { toast("Cloud sync failed — check URL/permissions"); return; }
-      A.save(db); toast("Synced from cloud"); renderAnalytics();
+      A.save(db);
+      // Fold confirmed QR scans (from the public /scanping endpoint) into each location.
+      const scans = await window.Backend.fetchScans();
+      if (scans) {
+        const db2 = A.load();
+        for (const locId in scans) {
+          const L = db2.locations[locId] || A.ensureLoc(db2, { id: locId, name: locId, type: "qr" });
+          L.totals.qrscan = scans[locId]; // server is authoritative for confirmed scans
+        }
+        A.save(db2);
+      }
+      toast("Synced from cloud"); renderAnalytics();
     });
     $("pushConfig").addEventListener("click", async () => {
       const st = $("beStatus");

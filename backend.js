@@ -67,6 +67,17 @@
       return db;
     } catch (e) { return null; }
   }
+  // Confirmed QR scans (written by the public /scanping Funnel endpoint). Returns
+  // { locId: count } so Super Admin can fold real scan counts into the analytics.
+  async function fetchScans() {
+    if (!pb) { if (!(await init())) return null; }
+    try {
+      const list = await pb.collection("scans").getFullList({ sort: "-created" });
+      const byLoc = {};
+      list.forEach((r) => { if (r.locId) byLoc[r.locId] = (byLoc[r.locId] || 0) + 1; });
+      return byLoc;
+    } catch (e) { return null; }
+  }
   // Fleet management: pull the active pushed config (Super Admin controls all mirrors).
   async function fetchConfig() {
     if (!pb) { if (!(await init())) return null; }
@@ -87,5 +98,5 @@
     } catch (e) { return false; }
   }
 
-  window.Backend = { enabled, init, upsertLocation, pushLead, fetchAllLocations, fetchConfig, pushConfig, beCfg };
+  window.Backend = { enabled, init, upsertLocation, pushLead, fetchAllLocations, fetchScans, fetchConfig, pushConfig, beCfg };
 })();
