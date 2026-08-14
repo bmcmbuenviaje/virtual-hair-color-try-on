@@ -77,10 +77,15 @@ window.ICOLOR_DEFAULT_CONFIG = {
     image: "",            // uploaded poster as a data: URL (optional, overrides card)
   },
 
-  // Coupon on the A5 report. unique:true prints a per-session code
-  //   LOC3-CAMPAIGN-XXX  (3-letter location code + campaign shortcode + 3 random);
-  //   `code` is the fallback when unique:false. `campaign` is an optional shortcode.
-  coupon: { enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true },
+  // Coupon on the A5 report.
+  //   source "generated" — print a unique per-session code LOC3-CAMPAIGN-XXX
+  //     (3-letter location code + campaign shortcode + 3 random); `code` is the
+  //     fallback when unique:false.
+  //   source "pool" — claim a code from the uploaded voucher pool on the server
+  //     (client-supplied codes, each used once across all kiosks). Falls back to a
+  //     generated code if the pool is empty or the server is unreachable.
+  //   `campaign` also filters which pool codes are claimed.
+  coupon: { enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true, source: "generated" },
 
   // A5 print report design (edited in the client admin when 'print' is enabled).
   printLayout: {

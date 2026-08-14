@@ -1,4 +1,4 @@
-/* iColor Plus — Super Admin (Mineski): client-view controls + consolidated analytics */
+/* iColor Plus — Super Admin: client-view controls + consolidated analytics */
 (function () {
   const $ = (id) => document.getElementById(id);
   const A = window.Analytics, D = window.Dash;
@@ -59,7 +59,7 @@
     cfg.features = cfg.features || {};
     ALLF.forEach((k) => { if (typeof cfg.features[k] !== "boolean") cfg.features[k] = false; });
     cfg.promo = Object.assign({ enabled: false, shadeId: "", title: "Shade of the Week", message: "", image: "" }, cfg.promo || {});
-    cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true }, cfg.coupon || {});
+    cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true, source: "generated" }, cfg.coupon || {});
     cfg.printLayout = Object.assign({ title: "Personalized Hair Colour Analysis", accentFrom: "#5f7d2e", accentTo: "#b8942f", footer: "", showBrighten: true, showMatches: true }, cfg.printLayout || {});
     cfg.attract = Object.assign({ idleMs: 45000, shadeId: "", cta: "Tap to try your color" }, cfg.attract || {});
     cfg.qr = Object.assign({ baseUrl: "", scanPingUrl: "", includeShade: true }, cfg.qr || {});
@@ -166,6 +166,7 @@
       $("couponTerms").value = cfg.coupon.terms || "";
       if ($("couponCampaign")) $("couponCampaign").value = cfg.coupon.campaign || "";
       if ($("couponUnique")) $("couponUnique").checked = cfg.coupon.unique !== false;
+      if ($("couponSource")) $("couponSource").value = cfg.coupon.source || "generated";
     }
     if ($("plTitle")) {
       $("plTitle").value = cfg.printLayout.title || "";
@@ -201,6 +202,7 @@
     on("couponTerms", "input", (e) => (cfg.coupon.terms = e.target.value));
     on("couponCampaign", "input", (e) => (cfg.coupon.campaign = e.target.value));
     on("couponUnique", "change", (e) => (cfg.coupon.unique = e.target.checked));
+    on("couponSource", "change", (e) => (cfg.coupon.source = e.target.value));
     on("plTitle", "input", (e) => (cfg.printLayout.title = e.target.value));
     on("plFrom", "input", (e) => (cfg.printLayout.accentFrom = e.target.value));
     on("plTo", "input", (e) => (cfg.printLayout.accentTo = e.target.value));
@@ -381,6 +383,41 @@
       if (!confirm("Clear ALL analytics on this device (every location)?")) return;
       A.clearAll(); toast("Cleared"); renderAnalytics();
     });
+
+    // ---- Voucher pool (import + stats) ----
+    const backendSet = () => window.Backend && cfg.backend && cfg.backend.provider === "pocketbase" && cfg.backend.url;
+    async function refreshVoucherStats() {
+      const el = $("vpStats"); if (!el) return;
+      if (!backendSet()) { el.textContent = "Set a PocketBase backend below to use the pool."; return; }
+      el.textContent = "Loading pool…";
+      const s = await window.Backend.voucherStats();
+      el.textContent = s ? "Pool: " + D.fmt(s.total) + " total · " + D.fmt(s.used) + " used · " + D.fmt(s.remaining) + " remaining"
+                         : "Couldn't read the pool (check backend).";
+    }
+    const on = (id, ev, fn) => { const el = $(id); if (el) el.addEventListener(ev, fn); };
+    on("vpUpload", "click", () => $("vpFile").click());
+    on("vpFile", "change", (e) => {
+      const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return;
+      const rd = new FileReader(); rd.onload = () => { $("vpCodes").value = String(rd.result || ""); }; rd.readAsText(f);
+    });
+    on("vpRefresh", "click", refreshVoucherStats);
+    on("vpImport", "click", async () => {
+      if (!backendSet()) { toast("Set & save a PocketBase backend first"); return; }
+      const raw = ($("vpCodes").value || "").split(/[\r\n,]+/).map((s) => s.trim()).filter(Boolean);
+      const codes = Array.from(new Set(raw));
+      if (!codes.length) { toast("Paste or load some codes first"); return; }
+      const campaign = ($("vpCampaign").value || "").trim();
+      toast("Importing " + codes.length + " codes…");
+      let added = 0, skipped = 0;
+      for (let i = 0; i < codes.length; i += 5000) { // hook caps at 5000/request
+        const res = await window.Backend.importVouchers(codes.slice(i, i + 5000), campaign);
+        if (res) { added += res.added || 0; skipped += res.skipped || 0; }
+      }
+      toast("Imported " + added + " new · " + skipped + " skipped (duplicates)");
+      $("vpCodes").value = "";
+      refreshVoucherStats();
+    });
+    refreshVoucherStats();
   }
 
   if ($("app").style.display !== "none") boot();

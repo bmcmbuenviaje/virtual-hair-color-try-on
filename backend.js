@@ -5,7 +5,7 @@
    Keeps localStorage as the source of truth (offline-safe) and, when a URL
    is set, mirrors the location snapshot + leads to PocketBase and lets Super
    Admin pull consolidated data + push config to the fleet.
-   Server is self-hosted by Mineski (see POCKETBASE.md).
+   Server is self-hosted (see POCKETBASE.md).
    ============================================================ */
 (function () {
   const SDK = "assets/vendor/pocketbase.umd.js";
@@ -96,6 +96,35 @@
       return db;
     } catch (e) { return null; }
   }
+  // ---- Voucher pool ----
+  // Claim ONE unused code from the central pool (atomic server-side, so no two
+  // kiosks ever get the same code). Returns the code string, or null if empty/offline.
+  async function claimVoucher(campaign) {
+    if (!enabled()) return null;
+    if (!pb) { if (!(await init())) return null; }
+    try {
+      const loc = window.Analytics ? window.Analytics.currentLocation().id : "";
+      const res = await pb.send("/claim-voucher", { method: "POST", body: { loc: loc, campaign: campaign || "" } });
+      return res && res.ok && res.code ? res.code : null;
+    } catch (e) { return null; }
+  }
+  // Import a batch of client-supplied codes into the pool (duplicates skipped).
+  async function importVouchers(codes, campaign) {
+    if (!pb) { if (!(await init())) return null; }
+    try {
+      return await pb.send("/import-vouchers", { method: "POST", body: { codes: codes, campaign: campaign || "" } });
+    } catch (e) { return null; }
+  }
+  // Pool stats for the Super Admin: total / used / remaining.
+  async function voucherStats() {
+    if (!pb) { if (!(await init())) return null; }
+    try {
+      const total = (await pb.collection("vouchers").getList(1, 1)).totalItems;
+      const used = (await pb.collection("vouchers").getList(1, 1, { filter: "used = true" })).totalItems;
+      return { total: total, used: used, remaining: Math.max(0, total - used) };
+    } catch (e) { return null; }
+  }
+
   // Confirmed QR scans (written by the public /scanping Funnel endpoint). Returns
   // { locId: count } so Super Admin can fold real scan counts into the analytics.
   async function fetchScans() {
@@ -127,5 +156,5 @@
     } catch (e) { return false; }
   }
 
-  window.Backend = { enabled, init, upsertLocation, pushLead, flushLeadOutbox, fetchAllLocations, fetchScans, fetchConfig, pushConfig, beCfg };
+  window.Backend = { enabled, init, upsertLocation, pushLead, flushLeadOutbox, fetchAllLocations, fetchScans, claimVoucher, importVouchers, voucherStats, fetchConfig, pushConfig, beCfg };
 })();

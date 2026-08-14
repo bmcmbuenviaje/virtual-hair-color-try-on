@@ -235,6 +235,25 @@ function couponCode() {
   try { window.Backend && window.Backend.enabled() && window.Backend.pushCoupon && window.Backend.pushCoupon(_sessionCoupon, camp); } catch (e) {}
   return _sessionCoupon;
 }
+// Resolve the coupon code for this session, awaiting a pool claim when configured.
+// Call this (await) before rendering the report; couponCode() then returns the cached code.
+async function ensureSessionCoupon() {
+  const cp = CONFIG.coupon || {};
+  if (_sessionCoupon) return _sessionCoupon;
+  if (cp.unique === false) return couponCode(); // static code
+  if (cp.source === "pool" && window.Backend && window.Backend.enabled()) {
+    try {
+      const claimed = await window.Backend.claimVoucher(cp.campaign || "");
+      if (claimed) {
+        _sessionCoupon = claimed;
+        try { window.Analytics && window.Analytics.logCoupon && window.Analytics.logCoupon(claimed, cp.campaign || ""); } catch (e) {}
+        return _sessionCoupon;
+      }
+    } catch (e) {}
+    // pool empty / offline → fall through to a generated code so the customer still gets one
+  }
+  return couponCode();
+}
 
 /* ============================================================
    Recolor helpers
@@ -1558,6 +1577,11 @@ async function buildReportCard(a, format) {
 
 // Build a high-resolution A5-landscape analysis card (print-friendly + shareable).
 async function buildLandscapeCard(a) {
+  // Resolve the coupon code first (may claim one from the server pool) so it's
+  // ready when the coupon is drawn below.
+  if (FEATURES.coupon && CONFIG.coupon && CONFIG.coupon.enabled) {
+    try { await ensureSessionCoupon(); } catch (e) {}
+  }
   const W = 2100, H = 1485; // A5 landscape @ ~254 dpi
   const cv = document.createElement("canvas");
   cv.width = W;

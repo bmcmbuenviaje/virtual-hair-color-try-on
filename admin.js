@@ -62,7 +62,7 @@
 
   let cfg = resolveCurrent();
   cfg.promo = Object.assign({ enabled: false, shadeId: "", title: "Shade of the Week", message: "", image: "" }, cfg.promo || {});
-  cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true }, cfg.coupon || {});
+  cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true, source: "generated" }, cfg.coupon || {});
   cfg.printLayout = Object.assign({ title: "Personalized Hair Colour Analysis", accentFrom: "#5f7d2e", accentTo: "#b8942f", footer: "", showBrighten: true, showMatches: true }, cfg.printLayout || {});
 
   function renderContentEditors() {
@@ -82,6 +82,7 @@
       $("couponTerms").value = cfg.coupon.terms || "";
       if ($("couponCampaign")) $("couponCampaign").value = cfg.coupon.campaign || "";
       if ($("couponUnique")) $("couponUnique").checked = cfg.coupon.unique !== false;
+      if ($("couponSource")) $("couponSource").value = cfg.coupon.source || "generated";
     }
     if ($("plTitle")) {
       $("plTitle").value = cfg.printLayout.title || "";
@@ -107,6 +108,7 @@
     on("couponTerms", "input", (e) => (cfg.coupon.terms = e.target.value));
     on("couponCampaign", "input", (e) => (cfg.coupon.campaign = e.target.value));
     on("couponUnique", "change", (e) => (cfg.coupon.unique = e.target.checked));
+    on("couponSource", "change", (e) => (cfg.coupon.source = e.target.value));
     on("plTitle", "input", (e) => (cfg.printLayout.title = e.target.value));
     on("plFrom", "input", (e) => (cfg.printLayout.accentFrom = e.target.value));
     on("plTo", "input", (e) => (cfg.printLayout.accentTo = e.target.value));
@@ -265,7 +267,7 @@
     const al = $("analyticsLink"); if (al) al.style.display = ca.showAnalytics ? "" : "none";
     const sb = $("save"); const rb = $("reset");
     if (ca.readOnly) {
-      if (sb) { sb.disabled = true; sb.textContent = "View only (locked by Mineski)"; sb.style.opacity = 0.6; }
+      if (sb) { sb.disabled = true; sb.textContent = "View only (locked by Super Admin)"; sb.style.opacity = 0.6; }
       if (rb) { rb.disabled = true; rb.style.opacity = 0.6; }
     } else if (sb) { sb.disabled = false; sb.textContent = "Save to this device"; sb.style.opacity = 1; if (rb) { rb.disabled = false; rb.style.opacity = 1; } }
   }

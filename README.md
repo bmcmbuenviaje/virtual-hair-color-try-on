@@ -11,7 +11,11 @@ their own device. No images or video ever leave the browser.
 - 🛠️ **Admin console + package tiers** — `/admin.html` lets you turn features on/off, add/edit/hide/reorder colours, and ship anything from a Basic 5-colour filter to an All-in analysis+print package (see below)
 - 📱 **QR-to-phone handoff**, ⭐ **shade-of-the-week promo banner** (with poster upload), 🎟️ **coupon on the A5 report**, 📧 **opt-in lead capture** (consent-only, CSV export), ⏰ **time-of-day heatmap + dwell**, ✨ **"get this look"** (match a shade from an inspiration photo), 🌐 **Tagalog/English toggle**, 📴 **offline PWA** — all Super-Admin-gated feature toggles
 - ☁️ **Optional live backend** (self-hosted PocketBase) for real-time consolidation + fleet config push — see [POCKETBASE.md](POCKETBASE.md); works fully offline without it
+<<<<<<< HEAD
+- 📊 **Usage analytics + two-tier back-office** — client dashboard (`/analytics.html`) tracks try-ons per SKU, sessions, captures, undertone mix and more, tagged by store/event; a **Super Admin** (`/superadmin.html`) controls the client's admin view and sees consolidated analytics across all activations
+=======
 - 📊 **Usage analytics + two-tier back-office** — client dashboard (`/analytics.html`) tracks try-ons per SKU, sessions, captures, undertone mix and more, tagged by store/event; a  **Super Admin** (`/superadmin.html`) controls the client's admin view and sees consolidated analytics across all activations
+>>>>>>> 2f4e2139f4f971b1a4b3b3a906c55234431004c7
 
 - 🎥 **Live AR filter** using the device camera via `getUserMedia`
 - 🖼️ **Upload a selfie** instead of using the camera — the same analysis runs on the still photo
@@ -86,7 +90,11 @@ wins; otherwise it uses the committed [`config.default.js`](config.default.js).
 
 - **Client admin** — [`/admin.html`](admin.html) (username/password from `config.default.js` → `admin`). Configures the package the client received.
 - **Usage analytics** — [`/analytics.html`](analytics.html) (same client login). Set the deployment's **location** (store / event / web) once, then every try-on is tagged to it. Shows **try-ons per product/SKU**, sessions, captures (photo/video), analyses, shares, a 14-day trend, skin-undertone mix, and an engagement funnel — the marketing data the client can view. Export the location's numbers as JSON.
+<<<<<<< HEAD
+- **Super Admin** — [`/superadmin.html`](superadmin.html) (separate `superAdmin` credentials). Two jobs:
+=======
 - **Super Admin ()** — [`/superadmin.html`](superadmin.html) (separate `superAdmin` credentials). Two jobs:
+>>>>>>> 2f4e2139f4f971b1a4b3b3a906c55234431004c7
   1. **Control the client's admin view** — toggle which sections the client admin can see (tier presets, features, colours, export, analytics) and set it view-only.
   2. **Consolidated analytics** — network-wide totals across **all** activations, a per-location comparison table, top products network-wide, and try-ons by location. Import each location's exported JSON to consolidate across devices (no backend needed). This consolidated view is visible **here only**.
 
