@@ -329,24 +329,46 @@
       const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = "icolor-coupon-codes.csv"; document.body.appendChild(a); a.click(); a.remove();
       toast("Exported coupon codes CSV");
     });
-    $("syncCloud").addEventListener("click", async () => {
-      if (!window.Backend || !cfg.backend || cfg.backend.provider !== "pocketbase" || !cfg.backend.url) { toast("Set & save a PocketBase URL first"); return; }
-      toast("Syncing from cloud…");
-      const db = await window.Backend.fetchAllLocations();
-      if (!db) { toast("Cloud sync failed — check URL/permissions"); return; }
-      A.save(db);
-      // Fold confirmed QR scans (from the public /scanping endpoint) into each location.
-      const scans = await window.Backend.fetchScans();
-      if (scans) {
-        const db2 = A.load();
-        for (const locId in scans) {
-          const L = db2.locations[locId] || A.ensureLoc(db2, { id: locId, name: locId, type: "qr" });
-          L.totals.qrscan = scans[locId]; // server is authoritative for confirmed scans
-        }
-        A.save(db2);
+    // Pull the fleet from the cloud (data + confirmed QR scans) and re-render.
+    // Used by the manual button AND the auto-refresh loop (silent).
+    let _syncing = false;
+    async function cloudSync(opts) {
+      const silent = opts && opts.silent;
+      if (!window.Backend || !cfg.backend || cfg.backend.provider !== "pocketbase" || !cfg.backend.url) {
+        if (!silent) toast("Set & save a PocketBase URL first");
+        return false;
       }
-      toast("Synced from cloud"); renderAnalytics();
-    });
+      if (_syncing) return false; // don't overlap slow requests
+      _syncing = true;
+      try {
+        const db = await window.Backend.fetchAllLocations();
+        if (!db) { if (!silent) toast("Cloud sync failed — check URL/permissions"); return false; }
+        A.save(db);
+        // Fold confirmed QR scans (from the public /scanping endpoint) into each location.
+        const scans = await window.Backend.fetchScans();
+        if (scans) {
+          const db2 = A.load();
+          for (const locId in scans) {
+            const L = db2.locations[locId] || A.ensureLoc(db2, { id: locId, name: locId, type: "qr" });
+            L.totals.qrscan = scans[locId]; // server is authoritative for confirmed scans
+          }
+          A.save(db2);
+        }
+        renderAnalytics();
+        if ($("autoSyncStatus")) $("autoSyncStatus").textContent = "● Live · updated " + new Date().toLocaleTimeString();
+        if (!silent) toast("Synced from cloud");
+        return true;
+      } finally { _syncing = false; }
+    }
+    $("syncCloud").addEventListener("click", () => cloudSync({ silent: false }));
+    // Auto-refresh the fleet every 30s (matches the kiosk heartbeat); pause when the
+    // tab is hidden to save requests. Only runs when a PocketBase backend is set.
+    if (cfg.backend && cfg.backend.provider === "pocketbase" && cfg.backend.url) {
+      const tick = () => { if (!document.hidden) cloudSync({ silent: true }); };
+      setInterval(tick, 30000);
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) tick(); });
+      tick(); // immediate first pull
+    }
     $("pushConfig").addEventListener("click", async () => {
       const st = $("beStatus");
       if (!window.Backend || cfg.backend.provider !== "pocketbase" || !cfg.backend.url) { st.textContent = "Set provider = PocketBase and a URL, then Save, first."; return; }
