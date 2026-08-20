@@ -71,6 +71,7 @@
       D.kpi("Avg dwell", D.dwellStr(A.avgDwellSec(L)), "per session") +
       D.kpi("Leads", D.fmt(t.leads || 0), "opted-in") +
       D.kpi("QR scans", D.fmt(t.qrscan || 0), D.fmt(t.qrshow || 0) + " hand-offs") +
+      D.kpi("Shop clicks", D.fmt(t.shopclick || 0), "buy taps") +
       D.kpi("Shares", D.fmt(t.share), "social cards");
     const heatEl = $("heat"); if (heatEl) heatEl.innerHTML = D.heat(L.perHour);
 
@@ -89,6 +90,7 @@
       { label: "Analyses", value: t.analysis || 0, color: "#8FB24A" },
       { label: "Captures", value: captures, color: "#B8942F" },
       { label: "Leads", value: t.leads || 0, color: "#C9A227" },
+      { label: "Shop clicks", value: t.shopclick || 0, color: "#C06A9A" },
       { label: "Shares", value: t.share || 0, color: "#E0C46A" },
       { label: "QR scans", value: t.qrscan || 0, color: "#5A78A0" },
     ]);
