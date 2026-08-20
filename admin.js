@@ -61,7 +61,7 @@
   }
 
   let cfg = resolveCurrent();
-  cfg.promo = Object.assign({ enabled: false, shadeId: "", title: "Shade of the Week", message: "", image: "" }, cfg.promo || {});
+  cfg.promo = Object.assign({ enabled: false, shadeId: "", title: "Shade of the Week", message: "", image: "", popup: false, popupText: "Tap the screen, and try-on our iColor products!" }, cfg.promo || {});
   cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true, source: "generated" }, cfg.coupon || {});
   cfg.printLayout = Object.assign({ title: "Personalized Hair Colour Analysis", accentFrom: "#5f7d2e", accentTo: "#b8942f", footer: "", showBrighten: true, showMatches: true }, cfg.printLayout || {});
   cfg.commerce = Object.assign({ currency: "₱", buttonLabel: "Add to Cart", showQr: true, checkout: "product" }, cfg.commerce || {});
@@ -75,6 +75,8 @@
       $("promoMsg").value = cfg.promo.message || "";
       const pv = $("promoPrev");
       if (cfg.promo.image) { pv.src = cfg.promo.image; pv.style.display = ""; } else pv.style.display = "none";
+      if ($("promoPopup")) $("promoPopup").checked = !!cfg.promo.popup;
+      if ($("promoPopupText")) $("promoPopupText").value = cfg.promo.popupText || "";
     }
     if ($("couponEnabled")) {
       $("couponEnabled").checked = !!cfg.coupon.enabled;
@@ -100,6 +102,8 @@
     on("promoShade", "change", (e) => (cfg.promo.shadeId = e.target.value));
     on("promoTitle", "input", (e) => (cfg.promo.title = e.target.value));
     on("promoMsg", "input", (e) => (cfg.promo.message = e.target.value));
+    on("promoPopup", "change", (e) => (cfg.promo.popup = e.target.checked));
+    on("promoPopupText", "input", (e) => (cfg.promo.popupText = e.target.value));
     on("promoUpload", "click", () => $("promoFile").click());
     on("promoFile", "change", (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return; const rd = new FileReader(); rd.onload = () => { cfg.promo.image = rd.result; renderContentEditors(); }; rd.readAsDataURL(f); });
     on("promoClear", "click", () => { cfg.promo.image = ""; renderContentEditors(); });

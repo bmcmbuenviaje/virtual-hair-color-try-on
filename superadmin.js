@@ -87,11 +87,11 @@
     );
     cfg.features = cfg.features || {};
     ALLF.forEach((k) => { if (typeof cfg.features[k] !== "boolean") cfg.features[k] = false; });
-    cfg.promo = Object.assign({ enabled: false, shadeId: "", title: "Shade of the Week", message: "", image: "" }, cfg.promo || {});
+    cfg.promo = Object.assign({ enabled: false, shadeId: "", title: "Shade of the Week", message: "", image: "", popup: false, popupText: "Tap the screen, and try-on our iColor products!" }, cfg.promo || {});
     cfg.promo.ab = Object.assign({ enabled: false, title: "", message: "", shadeId: "" }, cfg.promo.ab || {});
     cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true, source: "generated" }, cfg.coupon || {});
     cfg.printLayout = Object.assign({ title: "Personalized Hair Colour Analysis", accentFrom: "#5f7d2e", accentTo: "#b8942f", footer: "", showBrighten: true, showMatches: true }, cfg.printLayout || {});
-    cfg.attract = Object.assign({ idleMs: 45000, shadeId: "", cta: "Tap to try your color" }, cfg.attract || {});
+    cfg.attract = Object.assign({ idleMs: 45000, shadeId: "", cta: "Tap to try your color", usePromo: false }, cfg.attract || {});
     cfg.qr = Object.assign({ baseUrl: "", scanPingUrl: "", includeShade: true }, cfg.qr || {});
     cfg.commerce = Object.assign({ currency: "₱", buttonLabel: "Add to Cart", showQr: true, checkout: "product" }, cfg.commerce || {});
     cfg.privacy = Object.assign({ policyUrl: "", noticeText: "", retentionDays: 365 }, cfg.privacy || {});
@@ -199,6 +199,8 @@
       $("promoMsg").value = cfg.promo.message || "";
       const pv = $("promoPrev");
       if (cfg.promo.image) { pv.src = cfg.promo.image; pv.style.display = ""; } else pv.style.display = "none";
+      if ($("promoPopup")) $("promoPopup").checked = !!cfg.promo.popup;
+      if ($("promoPopupText")) $("promoPopupText").value = cfg.promo.popupText || "";
     }
     if ($("promoAb")) {
       $("promoAb").checked = !!cfg.promo.ab.enabled;
@@ -229,6 +231,7 @@
       const shades = (cfg.shades || []).filter((s) => s.hex);
       $("attractShade").innerHTML = `<option value="">— first shade —</option>` + shades.map((s) => `<option value="${s.id}" ${cfg.attract.shadeId === s.id ? "selected" : ""}>${s.name}</option>`).join("");
       $("attractCta").value = cfg.attract.cta || "";
+      if ($("attractUsePromo")) $("attractUsePromo").checked = !!cfg.attract.usePromo;
     }
     if ($("qrBaseUrl")) {
       $("qrBaseUrl").value = cfg.qr.baseUrl || "";
@@ -246,6 +249,8 @@
     on("promoShade", "change", (e) => (cfg.promo.shadeId = e.target.value));
     on("promoTitle", "input", (e) => (cfg.promo.title = e.target.value));
     on("promoMsg", "input", (e) => (cfg.promo.message = e.target.value));
+    on("promoPopup", "change", (e) => (cfg.promo.popup = e.target.checked));
+    on("promoPopupText", "input", (e) => (cfg.promo.popupText = e.target.value));
     on("promoAb", "change", (e) => (cfg.promo.ab.enabled = e.target.checked));
     on("promoBShade", "change", (e) => (cfg.promo.ab.shadeId = e.target.value));
     on("promoBTitle", "input", (e) => (cfg.promo.ab.title = e.target.value));
@@ -269,6 +274,7 @@
     on("attractIdle", "input", (e) => { const s = parseInt(e.target.value, 10); cfg.attract.idleMs = (s > 0 ? s : 45) * 1000; });
     on("attractShade", "change", (e) => (cfg.attract.shadeId = e.target.value));
     on("attractCta", "input", (e) => (cfg.attract.cta = e.target.value));
+    on("attractUsePromo", "change", (e) => (cfg.attract.usePromo = e.target.checked));
     on("qrBaseUrl", "input", (e) => (cfg.qr.baseUrl = e.target.value.trim()));
     on("qrScanPing", "input", (e) => (cfg.qr.scanPingUrl = e.target.value.trim()));
     on("pvPolicy", "input", (e) => (cfg.privacy.policyUrl = e.target.value.trim()));

@@ -80,6 +80,10 @@ window.ICOLOR_DEFAULT_CONFIG = {
     // A/B test: when ab.enabled, each session is randomly shown variant A (the
     // fields above) or B (below); conversions are tallied per variant in Super Admin.
     ab: { enabled: false, title: "", message: "", shadeId: "" },
+    // Show the promo as a tappable full-screen POPUP (with the CTA below) on the
+    // start screen, instead of only the inline banner.
+    popup: false,
+    popupText: "Tap the screen, and try-on our iColor products!",
   },
 
   // Coupon on the A5 report.
@@ -139,7 +143,9 @@ window.ICOLOR_DEFAULT_CONFIG = {
   // (only if camera permission is already granted, so it never surprise-prompts).
   // Turned on/off by features.attract (Super Admin); these are just the tuning params:
   // idle delay, teaser shade (blank = first shade), and the call-to-action text.
-  attract: { idleMs: 45000, shadeId: "", cta: "Tap to try your color" },
+  //   usePromo: on idle, pop up the promo campaign (no camera) instead of the
+  //     live camera-mirror — great for a storefront attract loop.
+  attract: { idleMs: 45000, shadeId: "", cta: "Tap to try your color", usePromo: false },
 
   // "Shop the look" ecommerce card (PAID; gated by features.commerce). When on and a
   // shade has a buyUrl, a product card appears at the bottom of the camera frame with

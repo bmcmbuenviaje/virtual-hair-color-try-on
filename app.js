@@ -2884,6 +2884,13 @@ function armIdle() {
 async function enterAttract() {
   if (!FEATURES.attract || attractActive) return;
   if (startScreen.classList.contains("hidden")) return; // only from the start screen
+  // Idle promo mode: pop up the campaign (no camera) instead of the mirror
+  const pr = CONFIG.promo || {};
+  if (ATTRACT.usePromo && FEATURES.promo && pr.enabled) {
+    attractActive = true;
+    openPromoModal();
+    return;
+  }
   if (!(await cameraGranted())) return;                 // never surprise-prompt
   try {
     await ensureSegmenter();
@@ -2966,34 +2973,65 @@ if (window.Backend && window.Backend.enabled()) {
 
 /* ---- Promo banner + QR handoff (start screen) ---- */
 let pendingPromoShade = null;
-function renderPromoBanner() {
-  const box = $("promoBanner");
-  if (!box) return;
+// Resolve the promo to show, applying the A/B variant when active.
+function resolvedPromo() {
   const p0 = CONFIG.promo || {};
-  if (!(FEATURES.promo && p0.enabled)) { box.classList.add("hidden"); return; }
-  // A/B test: variant B overrides the copy/shade when this session is in group B
-  let p = p0;
   if (window._abVariant === "B" && p0.ab && p0.ab.enabled) {
-    p = Object.assign({}, p0, {
+    return Object.assign({}, p0, {
       title: p0.ab.title || p0.title,
       message: p0.ab.message || p0.message,
       shadeId: p0.ab.shadeId || p0.shadeId,
     });
   }
+  return p0;
+}
+function promoInnerHTML(p) {
+  if (p.image) return `<img src="${p.image}" alt="Promo" />`;
+  const shade = SHADES.find((s) => s.id === p.shadeId);
+  return `<div class="promo-card">` +
+    (shade ? `<span class="p-dot" style="background:${shade.hex}"></span>` : "") +
+    `<div><div class="p-tag">${p.title || "Featured"}</div>` +
+    (shade ? `<div class="p-title">${shade.name}</div>` : "") +
+    `<div class="p-msg">${p.message || ""}</div></div></div>`;
+}
+function renderPromoBanner() {
+  const box = $("promoBanner");
+  if (!box) return;
+  const p0 = CONFIG.promo || {};
+  if (!(FEATURES.promo && p0.enabled)) { box.classList.add("hidden"); return; }
+  const p = resolvedPromo();
   box.classList.remove("hidden");
-  if (p.image) {
-    box.innerHTML = `<img src="${p.image}" alt="Promo" />`;
-  } else {
-    const shade = SHADES.find((s) => s.id === p.shadeId);
-    box.innerHTML =
-      `<div class="promo-card">` +
-      (shade ? `<span class="p-dot" style="background:${shade.hex}"></span>` : "") +
-      `<div><div class="p-tag">${p.title || "Featured"}</div>` +
-      (shade ? `<div class="p-title">${shade.name}</div>` : "") +
-      `<div class="p-msg">${p.message || ""}</div></div></div>`;
-  }
+  box.innerHTML = promoInnerHTML(p);
   box.style.cursor = "pointer";
   box.onclick = () => { if (p.shadeId) pendingPromoShade = p.shadeId; startBtn.click(); };
+}
+
+/* ---- Promo / campaign popup (start screen + idle attract) ---- */
+function openPromoModal() {
+  const m = $("promoModal"); if (!m) return;
+  const p = resolvedPromo();
+  const body = $("promoModalBody"); if (body) body.innerHTML = promoInnerHTML(p);
+  const cta = $("promoModalCta"); if (cta) cta.textContent = (CONFIG.promo || {}).popupText || "Tap the screen, and try-on our iColor products!";
+  m.classList.remove("hidden");
+}
+function closePromoModal(start) {
+  const m = $("promoModal"); if (m) m.classList.add("hidden");
+  attractActive = false;
+  if (start) {
+    const p = resolvedPromo();
+    if (p.shadeId) pendingPromoShade = p.shadeId;
+    if (startBtn) startBtn.click();
+  } else {
+    try { armIdle(); } catch (e) {} // dismissed → re-arm the idle timer
+  }
+}
+{
+  const m = $("promoModal");
+  if (m) {
+    m.addEventListener("click", (e) => { if (e.target && e.target.id === "promoModalClose") return; closePromoModal(true); });
+    const x = $("promoModalClose");
+    if (x) x.addEventListener("click", (e) => { e.stopPropagation(); closePromoModal(false); });
+  }
 }
 // Build the location-tagged deep link the QR encodes. Points at the PUBLIC base
 // (phones can't reach a tailnet address), carries this kiosk's location so a scan
@@ -3080,6 +3118,12 @@ function handleQrLanding() {
 renderPromoBanner();
 renderQR();
 handleQrLanding();
+// Promo popup on the start screen (skip if the visitor arrived from a QR scan).
+if (FEATURES.promo && (CONFIG.promo || {}).enabled && (CONFIG.promo || {}).popup) {
+  let fromQr = false;
+  try { fromQr = window.Analytics && window.Analytics.isQrLanding && window.Analytics.isQrLanding(); } catch (e) {}
+  if (!fromQr) openPromoModal();
+}
 
 // Fleet heartbeat: stamp this device's build + refresh last-seen on every load,
 // so Super Admin can spot offline or out-of-date kiosks.

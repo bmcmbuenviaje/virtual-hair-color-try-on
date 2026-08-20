@@ -69,6 +69,8 @@
         <button id="promoClear" class="btn ghost sm">Clear poster</button>
         <img id="promoPrev" style="height:64px;border-radius:8px;border:1px solid var(--ring);display:none" />
       </div>
+      <label class="perm" style="margin-top:12px;width:max-content"><input type="checkbox" id="promoPopup" /> Show as a full-screen popup (tap to start)</label>
+      <div class="field" style="margin-top:8px"><label>Popup call-to-action</label><input id="promoPopupText" type="text" placeholder="Tap the screen, and try-on our iColor products!" /></div>
       <div class="perm" style="margin:14px 0 8px;width:max-content"><input type="checkbox" id="promoAb" /> A/B test — show a second variant to ~half of sessions</div>
       <div class="row" style="gap:14px;flex-wrap:wrap;align-items:flex-end">
         <div class="field" style="min-width:180px"><label>B · Featured shade</label><select id="promoBShade"></select></div>
@@ -136,6 +138,7 @@
         <div class="field" style="min-width:180px"><label>Teaser shade</label><select id="attractShade"></select></div>
         <div class="field" style="flex:1;min-width:200px"><label>Call-to-action</label><input id="attractCta" type="text" placeholder="Tap to try your color" /></div>
       </div>
+      <label class="perm" style="width:max-content;margin-top:12px"><input type="checkbox" id="attractUsePromo" /> Pop up the promo campaign on idle (no camera, instead of the mirror)</label>
     </div>
 
     <div class="a-card" id="sa-card-qr">
