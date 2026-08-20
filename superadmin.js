@@ -375,9 +375,34 @@
     $("demoBanner").style.display = demo ? "" : "none";
   }
 
+  // Make each Configuration-tab card collapsible; header toggles it. Closed by default.
+  function setupCollapsibles() {
+    document.querySelectorAll("#tabCfg .a-card").forEach((card) => {
+      const h = card.querySelector(":scope > h2");
+      if (!h || card.dataset.collapsibleReady) return;
+      card.dataset.collapsibleReady = "1";
+      const body = document.createElement("div");
+      body.className = "a-body";
+      let n = h.nextSibling;
+      while (n) { const nx = n.nextSibling; body.appendChild(n); n = nx; }
+      card.appendChild(body);
+      card.classList.add("collapsible", "collapsed");
+      h.setAttribute("role", "button");
+      h.setAttribute("tabindex", "0");
+      h.setAttribute("aria-expanded", "false");
+      const toggle = () => {
+        const collapsed = card.classList.toggle("collapsed");
+        h.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      };
+      h.addEventListener("click", toggle);
+      h.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+    });
+  }
+
   function boot() {
     renderConfig();
     wireConfig();
+    setupCollapsibles();
     renderAnalytics();
 
     $("savePerms").addEventListener("click", () => {
