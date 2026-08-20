@@ -274,6 +274,30 @@
     } else if (sb) { sb.disabled = false; sb.textContent = "Save to this device"; sb.style.opacity = 1; if (rb) { rb.disabled = false; rb.style.opacity = 1; } }
   }
 
+  // Make each feature card collapsible; header toggles it. Closed by default on load.
+  function setupCollapsibles() {
+    document.querySelectorAll("#app .a-card").forEach((card) => {
+      const h = card.querySelector(":scope > h2");
+      if (!h || card.dataset.collapsibleReady) return;
+      card.dataset.collapsibleReady = "1";
+      const body = document.createElement("div");
+      body.className = "a-body";
+      let n = h.nextSibling;
+      while (n) { const nx = n.nextSibling; body.appendChild(n); n = nx; }
+      card.appendChild(body);
+      card.classList.add("collapsible", "collapsed"); // closed by default every load
+      h.setAttribute("role", "button");
+      h.setAttribute("tabindex", "0");
+      h.setAttribute("aria-expanded", "false");
+      const toggle = () => {
+        const collapsed = card.classList.toggle("collapsed");
+        h.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      };
+      h.addEventListener("click", toggle);
+      h.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+    });
+  }
+
   function render() {
     if ($("tierName")) $("tierName").value = cfg.tier || "";
     if ($("maxShades")) $("maxShades").value = cfg.maxShades || "";
@@ -284,6 +308,7 @@
     renderContentEditors();
     if (window.CommerceEditor) window.CommerceEditor.mount(cfg, $("commerceRows"), { toast: toast });
     applyClientPerms();
+    setupCollapsibles();
   }
 
   /* -------- export / import / save -------- */

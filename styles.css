@@ -553,8 +553,26 @@ input[type="range"]::-moz-range-thumb {
 .field label { font-size: 12px; color: var(--muted); }
 .field input, .field select { padding: 9px 10px; border-radius: 9px; border: 1px solid var(--ring); background: rgba(0,0,0,0.3); color: var(--text); font-size: 14px; }
 .perm-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
-.perm { display: flex; align-items: center; gap: 10px; padding: 11px 13px; border: 1px solid var(--ring); border-radius: 10px; background: rgba(255,255,255,0.03); font-size: 13.5px; }
-.perm input { width: 18px; height: 18px; accent-color: var(--accent); }
+.perm { display: flex; align-items: center; gap: 10px; padding: 11px 13px; border: 1px solid var(--ring); border-radius: 10px; background: rgba(255,255,255,0.03); font-size: 13.5px; cursor: pointer; }
+/* checkboxes inside .perm render as iOS-style switches */
+.perm input[type="checkbox"] {
+  appearance: none; -webkit-appearance: none; margin: 0; flex: 0 0 auto; cursor: pointer;
+  width: 40px; height: 22px; border-radius: 999px; background: rgba(255,255,255,0.16);
+  position: relative; transition: background .18s;
+}
+.perm input[type="checkbox"]::before {
+  content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  top: 3px; left: 3px; transition: transform .18s; box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+}
+.perm input[type="checkbox"]:checked { background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+.perm input[type="checkbox"]:checked::before { transform: translateX(18px); }
+.perm input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+/* collapsible feature cards (admin) */
+.a-card.collapsible > h2 { cursor: pointer; position: relative; padding-right: 24px; margin-bottom: 0; user-select: none; }
+.a-card.collapsible > h2::after { content: "▾"; position: absolute; right: 0; top: 1px; color: var(--muted); font-size: 12px; transition: transform .2s; }
+.a-card.collapsible.collapsed > h2::after { transform: rotate(-90deg); }
+.a-card.collapsible:not(.collapsed) > h2 { margin-bottom: 14px; }
+.a-card.collapsible.collapsed > .a-body { display: none; }
 
 /* ---------- Printable card (one A5 landscape page) ---------- */
 #printReport { display: none; }
