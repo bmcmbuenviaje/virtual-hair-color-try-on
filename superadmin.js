@@ -36,6 +36,7 @@
     ["coupon", "Coupon on report"], ["leads", "Lead capture"], ["heatmap", "Time-of-day / heatmap"],
     ["getlook", "Get this look"], ["multilang", "Tagalog / English"], ["offline", "Offline mode"],
     ["attract", "Attract / idle mirror"], ["commerce", "Shop the look (ecommerce) — paid"],
+    ["camguide", "Camera fit guidance"],
   ];
   const ALLF = FEATURE_LABELS.map((f) => f[0]);
   const PRESETS = {
@@ -59,11 +60,13 @@
     cfg.features = cfg.features || {};
     ALLF.forEach((k) => { if (typeof cfg.features[k] !== "boolean") cfg.features[k] = false; });
     cfg.promo = Object.assign({ enabled: false, shadeId: "", title: "Shade of the Week", message: "", image: "" }, cfg.promo || {});
+    cfg.promo.ab = Object.assign({ enabled: false, title: "", message: "", shadeId: "" }, cfg.promo.ab || {});
     cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true, source: "generated" }, cfg.coupon || {});
     cfg.printLayout = Object.assign({ title: "Personalized Hair Colour Analysis", accentFrom: "#5f7d2e", accentTo: "#b8942f", footer: "", showBrighten: true, showMatches: true }, cfg.printLayout || {});
     cfg.attract = Object.assign({ idleMs: 45000, shadeId: "", cta: "Tap to try your color" }, cfg.attract || {});
     cfg.qr = Object.assign({ baseUrl: "", scanPingUrl: "", includeShade: true }, cfg.qr || {});
     cfg.commerce = Object.assign({ currency: "₱", buttonLabel: "Add to Cart", showQr: true, checkout: "product" }, cfg.commerce || {});
+    cfg.privacy = Object.assign({ policyUrl: "", noticeText: "", retentionDays: 365 }, cfg.privacy || {});
     cfg.backend = Object.assign({ provider: "none", url: "" }, cfg.backend || {});
     return cfg;
   }
@@ -160,6 +163,13 @@
       const pv = $("promoPrev");
       if (cfg.promo.image) { pv.src = cfg.promo.image; pv.style.display = ""; } else pv.style.display = "none";
     }
+    if ($("promoAb")) {
+      $("promoAb").checked = !!cfg.promo.ab.enabled;
+      const shades = (cfg.shades || []).filter((s) => s.hex);
+      $("promoBShade").innerHTML = `<option value="">— same as A —</option>` + shades.map((s) => `<option value="${s.id}" ${cfg.promo.ab.shadeId === s.id ? "selected" : ""}>${s.name}</option>`).join("");
+      $("promoBTitle").value = cfg.promo.ab.title || "";
+      $("promoBMsg").value = cfg.promo.ab.message || "";
+    }
     if ($("couponEnabled")) {
       $("couponEnabled").checked = !!cfg.coupon.enabled;
       $("couponCode").value = cfg.coupon.code || "";
@@ -187,6 +197,11 @@
       $("qrBaseUrl").value = cfg.qr.baseUrl || "";
       $("qrScanPing").value = cfg.qr.scanPingUrl || "";
     }
+    if ($("pvPolicy")) {
+      $("pvPolicy").value = cfg.privacy.policyUrl || "";
+      $("pvRetention").value = cfg.privacy.retentionDays != null ? cfg.privacy.retentionDays : 365;
+      $("pvNotice").value = cfg.privacy.noticeText || "";
+    }
   }
   function wireContentEditors() {
     const on = (id, ev, fn) => { const el = $(id); if (el) el.addEventListener(ev, fn); };
@@ -194,6 +209,10 @@
     on("promoShade", "change", (e) => (cfg.promo.shadeId = e.target.value));
     on("promoTitle", "input", (e) => (cfg.promo.title = e.target.value));
     on("promoMsg", "input", (e) => (cfg.promo.message = e.target.value));
+    on("promoAb", "change", (e) => (cfg.promo.ab.enabled = e.target.checked));
+    on("promoBShade", "change", (e) => (cfg.promo.ab.shadeId = e.target.value));
+    on("promoBTitle", "input", (e) => (cfg.promo.ab.title = e.target.value));
+    on("promoBMsg", "input", (e) => (cfg.promo.ab.message = e.target.value));
     on("promoUpload", "click", () => $("promoFile").click());
     on("promoFile", "change", (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return; const rd = new FileReader(); rd.onload = () => { cfg.promo.image = rd.result; renderContentEditors(); }; rd.readAsDataURL(f); });
     on("promoClear", "click", () => { cfg.promo.image = ""; renderContentEditors(); });
@@ -215,6 +234,14 @@
     on("attractCta", "input", (e) => (cfg.attract.cta = e.target.value));
     on("qrBaseUrl", "input", (e) => (cfg.qr.baseUrl = e.target.value.trim()));
     on("qrScanPing", "input", (e) => (cfg.qr.scanPingUrl = e.target.value.trim()));
+    on("pvPolicy", "input", (e) => (cfg.privacy.policyUrl = e.target.value.trim()));
+    on("pvNotice", "input", (e) => (cfg.privacy.noticeText = e.target.value));
+    on("pvRetention", "input", (e) => (cfg.privacy.retentionDays = parseInt(e.target.value, 10) || 0));
+    on("pvPurge", "click", () => {
+      const n = A.purgeOldLeads(cfg.privacy.retentionDays);
+      const m = $("pvMsg"); if (m) m.textContent = "Purged " + n + " lead(s) past retention.";
+      renderAnalytics();
+    });
   }
   function renderConfig() {
     if ($("tierName")) $("tierName").value = cfg.tier || "";
@@ -258,6 +285,20 @@
       D.kpi("Shop clicks", D.fmt(t.shopclick || 0), "buy taps") +
       D.kpi("Shares", D.fmt(t.share), "social cards");
     const heatEl = $("heat"); if (heatEl) heatEl.innerHTML = D.heat(agg.perHour);
+    // A/B promo comparison
+    const abEl = $("abTable"), abCard = $("abCard");
+    if (abEl && abCard) {
+      const ab = agg.ab || {};
+      const variants = ["A", "B"].filter((v) => ab[v]);
+      if (variants.length) {
+        abCard.style.display = "";
+        abEl.querySelector("tbody").innerHTML = variants.map((v) => {
+          const a = ab[v] || {}, sess = a.sessions || 0;
+          const conv = sess ? Math.round(((a.shopclick || 0) / sess) * 1000) / 10 : 0;
+          return `<tr><td><b>${v}</b></td><td class="num">${D.fmt(sess)}</td><td class="num">${D.fmt(a.tryon || 0)}</td><td class="num">${D.fmt(a.leads || 0)}</td><td class="num">${D.fmt(a.shopclick || 0)}</td><td class="num">${conv}%</td></tr>`;
+        }).join("");
+      } else abCard.style.display = "none";
+    }
     const funnelEl = $("funnel");
     if (funnelEl) funnelEl.innerHTML = D.bars([
       { label: "Sessions", value: t.sessions || 0, color: "#5F7D2E" },

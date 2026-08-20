@@ -1354,6 +1354,11 @@ function renderAnalysis(a) {
   likeSel.clear();
   stmtSel.clear();
 
+  const PV = CONFIG.privacy || {};
+  const policyLink = PV.policyUrl ? ` <a href="${PV.policyUrl}" target="_blank" rel="noopener noreferrer">Privacy Policy</a>` : "";
+  const privacyNote = (PV.noticeText
+    ? PV.noticeText
+    : `Your details are stored only to send your results and offers, kept up to ${PV.retentionDays || 365} days, and never sold.`) + policyLink;
   const leadsSec = FEATURES.leads ? `
     <section class="an-leads">
       <h3>Get your results &amp; offers</h3>
@@ -1362,6 +1367,7 @@ function renderAnalysis(a) {
         <input id="leadEmail" type="email" placeholder="Email address" />
         <input id="leadMobile" type="tel" placeholder="Mobile (optional)" />
         <label class="lead-consent"><input id="leadConsent" type="checkbox" /> <span>${((CONFIG.leads || {}).consentText) || "I agree to receive updates and offers."}</span></label>
+        <p class="lead-privacy">${privacyNote}</p>
         <button id="leadSubmit" class="an-try" style="align-self:flex-start">Sign me up</button>
         <div id="leadMsg" class="lead-msg"></div>
       </div>
@@ -2285,6 +2291,39 @@ function renderShopCard(shade) {
   card.classList.remove("hidden");
 }
 
+/* ---- Camera fit guidance: positioning oval + live low-light hint ---- */
+let _camGuideTimer = null, _camLightTimer = null;
+const _camSampleCv = document.createElement("canvas");
+_camSampleCv.width = 32; _camSampleCv.height = 24;
+function camBrightness() {
+  const v = $("video");
+  if (!v || v.readyState < 2 || !v.videoWidth) return null;
+  try {
+    const cx = _camSampleCv.getContext("2d");
+    cx.drawImage(v, 0, 0, 32, 24);
+    const d = cx.getImageData(0, 0, 32, 24).data;
+    let sum = 0;
+    for (let i = 0; i < d.length; i += 4) sum += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+    return sum / (d.length / 4);
+  } catch (e) { return null; }
+}
+function startCamGuide() {
+  const g = $("camGuide");
+  if (!g || !FEATURES.camguide) return;
+  g.classList.remove("hidden", "faded");
+  clearTimeout(_camGuideTimer);
+  _camGuideTimer = setTimeout(() => g.classList.add("faded"), 5000); // fade oval+tip, keep watching light
+  clearInterval(_camLightTimer);
+  _camLightTimer = setInterval(() => {
+    const b = camBrightness(), hint = $("camLight");
+    if (hint && b != null) hint.classList.toggle("hidden", b >= 55); // ~55/255 luma = too dark
+  }, 1500);
+}
+function stopCamGuide() {
+  const g = $("camGuide"); if (g) g.classList.add("hidden");
+  clearInterval(_camLightTimer); clearTimeout(_camGuideTimer);
+}
+
 function popShadeLabel(shade) {
   shadeLabel.innerHTML = "";
   if (shade.hex) {
@@ -2723,6 +2762,7 @@ async function handlePickedFile(file) {
   const firstEntry = appScreen.classList.contains("hidden");
   startScreen.classList.add("hidden");
   appScreen.classList.remove("hidden");
+  stopCamGuide(); // static photo — no live-camera guidance
   loader.classList.remove("hidden");
   loaderText.textContent = segmenter ? "Analyzing your hair…" : "Loading AR engine…";
   try {
@@ -2763,6 +2803,7 @@ async function goLive() {
       running = true;
       renderLoop();
     }
+    startCamGuide();
   } catch (err) {
     console.error(err);
     loader.classList.add("hidden");
@@ -2801,6 +2842,7 @@ startBtn.addEventListener("click", async () => {
     running = true;
     renderLoop();
     trk("sessions");
+    startCamGuide();
     if (pendingPromoShade) {
       const sh = SHADES.find((s) => s.id === pendingPromoShade);
       if (sh) selectShade(sh);
@@ -2927,8 +2969,17 @@ let pendingPromoShade = null;
 function renderPromoBanner() {
   const box = $("promoBanner");
   if (!box) return;
-  const p = CONFIG.promo || {};
-  if (!(FEATURES.promo && p.enabled)) { box.classList.add("hidden"); return; }
+  const p0 = CONFIG.promo || {};
+  if (!(FEATURES.promo && p0.enabled)) { box.classList.add("hidden"); return; }
+  // A/B test: variant B overrides the copy/shade when this session is in group B
+  let p = p0;
+  if (window._abVariant === "B" && p0.ab && p0.ab.enabled) {
+    p = Object.assign({}, p0, {
+      title: p0.ab.title || p0.title,
+      message: p0.ab.message || p0.message,
+      shadeId: p0.ab.shadeId || p0.shadeId,
+    });
+  }
   box.classList.remove("hidden");
   if (p.image) {
     box.innerHTML = `<img src="${p.image}" alt="Promo" />`;
@@ -3013,6 +3064,19 @@ function handleQrLanding() {
     }
   } catch (e) {}
 }
+// A/B promo test: assign this session to variant A or B (sticky per session) and
+// tell analytics, so conversions are tallied per variant.
+(function initAbVariant() {
+  const p = CONFIG.promo || {};
+  if (!(FEATURES.promo && p.enabled && p.ab && p.ab.enabled)) return;
+  let v = "A";
+  try {
+    v = sessionStorage.getItem("icolorVariant");
+    if (!v) { v = Math.random() < 0.5 ? "A" : "B"; sessionStorage.setItem("icolorVariant", v); }
+  } catch (e) {}
+  window._abVariant = v;
+  try { window.Analytics && window.Analytics.setVariant(v); } catch (e) {}
+})();
 renderPromoBanner();
 renderQR();
 handleQrLanding();
@@ -3029,6 +3093,8 @@ try {
     A.save(db);
   }
 } catch (e) {}
+// Data-privacy: auto-purge stored leads older than the retention window.
+try { window.Analytics && window.Analytics.purgeOldLeads((CONFIG.privacy || {}).retentionDays); } catch (e) {}
 // Show the build tag on the start-screen footer.
 try {
   const f = document.querySelector(".disclaimer");

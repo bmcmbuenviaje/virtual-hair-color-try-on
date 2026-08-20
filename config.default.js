@@ -67,6 +67,7 @@ window.ICOLOR_DEFAULT_CONFIG = {
     offline: true,     // offline PWA cache
     attract: false,    // kiosk attract / idle camera-mirror teaser
     commerce: false,   // "shop the look" ecommerce product card (PAID add-on)
+    camguide: true,    // camera fit guidance (positioning oval + low-light hint)
   },
 
   // Shade-of-the-week promo banner (Super Admin sets; shows on the start screen).
@@ -76,6 +77,9 @@ window.ICOLOR_DEFAULT_CONFIG = {
     title: "Shade of the Week",
     message: "",          // campaign copy
     image: "",            // uploaded poster as a data: URL (optional, overrides card)
+    // A/B test: when ab.enabled, each session is randomly shown variant A (the
+    // fields above) or B (below); conversions are tallied per variant in Super Admin.
+    ab: { enabled: false, title: "", message: "", shadeId: "" },
   },
 
   // Coupon on the A5 report.
@@ -103,6 +107,14 @@ window.ICOLOR_DEFAULT_CONFIG = {
     enabled: false,
     requireEmail: true,
     consentText: "I agree to receive iColor Plus updates and offers from Great Lengths.",
+  },
+
+  // Data privacy (PH Data Privacy Act). A short notice + optional policy link shown
+  // on the lead form; leads older than retentionDays are auto-purged on load.
+  privacy: {
+    policyUrl: "",       // link to the client's full privacy policy (optional)
+    noticeText: "",      // custom notice (blank = a sensible default is shown)
+    retentionDays: 365,  // auto-delete stored leads older than this (0 = keep forever)
   },
 
   // Live backend (optional). provider: "none" | "pocketbase" | "supabase".

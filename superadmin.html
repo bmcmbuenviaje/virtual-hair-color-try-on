@@ -69,6 +69,12 @@
         <button id="promoClear" class="btn ghost sm">Clear poster</button>
         <img id="promoPrev" style="height:64px;border-radius:8px;border:1px solid var(--ring);display:none" />
       </div>
+      <div class="perm" style="margin:14px 0 8px;width:max-content"><input type="checkbox" id="promoAb" /> A/B test — show a second variant to ~half of sessions</div>
+      <div class="row" style="gap:14px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="min-width:180px"><label>B · Featured shade</label><select id="promoBShade"></select></div>
+        <div class="field" style="flex:1;min-width:200px"><label>B · Title</label><input id="promoBTitle" type="text" placeholder="(defaults to A)" /></div>
+      </div>
+      <div class="field" style="margin-top:10px"><label>B · Message</label><input id="promoBMsg" type="text" placeholder="(defaults to A)" /></div>
     </div>
 
     <div class="a-card" id="sa-card-coupon">
@@ -156,6 +162,20 @@
       <div class="perm-grid" id="perms"></div>
     </div>
 
+    <div class="a-card" id="sa-card-privacy">
+      <h2>Data privacy <span class="muted">— consent &amp; retention</span></h2>
+      <p class="hint" style="color:var(--muted);font-size:12.5px;margin:-4px 0 12px">Shown on the lead form; stored leads older than the retention window are auto-deleted on load. Helps meet the PH Data Privacy Act. (Note: this purges local/consolidated data; server-side retention on PocketBase is separate.)</p>
+      <div class="row" style="gap:14px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="flex:1;min-width:220px"><label>Privacy policy URL</label><input id="pvPolicy" type="text" placeholder="https://client.com/privacy" /></div>
+        <div class="field" style="min-width:150px"><label>Retention (days, 0 = forever)</label><input id="pvRetention" type="number" min="0" class="num" style="width:120px" /></div>
+      </div>
+      <div class="field" style="margin-top:10px"><label>Consent notice (blank = sensible default)</label><input id="pvNotice" type="text" placeholder="Your details are stored only to…" /></div>
+      <div class="row" style="gap:10px;margin-top:12px;align-items:center">
+        <button id="pvPurge" class="btn ghost">Purge leads past retention now</button>
+        <span id="pvMsg" class="hint" style="color:var(--muted)"></span>
+      </div>
+    </div>
+
     <div class="save-bar dash-wrap" style="padding-left:0;padding-right:0">
       <button id="savePerms" class="btn">Save to this device</button>
       <button id="downloadCfg" class="btn ghost">⬇ Download config.default.js</button>
@@ -172,6 +192,16 @@
     <div class="a-card">
       <h2>Conversion funnel <span class="muted">network-wide</span></h2>
       <div id="funnel"></div>
+    </div>
+
+    <div class="a-card" id="abCard" style="display:none">
+      <h2>A/B promo test <span class="muted">— variant comparison</span></h2>
+      <div style="overflow-x:auto">
+        <table class="loc-table" id="abTable"><thead><tr>
+          <th>Variant</th><th class="num">Sessions</th><th class="num">Try-ons</th><th class="num">Leads</th><th class="num">Shop clicks</th><th class="num">Conv. %</th>
+        </tr></thead><tbody></tbody></table>
+      </div>
+      <p class="hint" style="color:var(--muted);font-size:12px;margin-top:8px">Conversion % = shop clicks ÷ sessions per variant. A = the promo above; B = the variant fields.</p>
     </div>
 
     <div class="a-card">

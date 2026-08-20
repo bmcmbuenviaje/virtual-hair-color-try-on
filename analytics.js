@@ -71,6 +71,17 @@
     return db.locations[loc.id];
   }
 
+  // A/B experiment variant for this session (set by the app when an A/B promo test
+  // is active). When set, events are also tallied per variant for comparison.
+  let _variant = null;
+  function setVariant(v) { _variant = v || null; }
+  function abBump(L, type) {
+    if (!_variant) return;
+    L.ab = L.ab || {};
+    L.ab[_variant] = L.ab[_variant] || {};
+    L.ab[_variant][type] = (L.ab[_variant][type] || 0) + 1;
+  }
+
   function track(type, opts) {
     opts = opts || {};
     const db = load();
@@ -83,6 +94,7 @@
     }
     if (L.totals[type] == null) L.totals[type] = 0;
     L.totals[type]++;
+    abBump(L, type);
     const t = dayKey();
     L.perDay[t] = L.perDay[t] || { sessions: 0, tryon: 0, photo: 0, video: 0, analysis: 0, share: 0 };
     L.perDay[t][type] = (L.perDay[t][type] || 0) + 1;
@@ -107,6 +119,7 @@
     L.leads = L.leads || [];
     L.leads.push(Object.assign({ ts: new Date().toISOString(), loc: L.meta.name }, lead));
     L.totals.leads = (L.totals.leads || 0) + 1;
+    abBump(L, "leads");
     L.lastSeen = new Date().toISOString();
     save(db);
   }
@@ -131,6 +144,24 @@
     }
     return rows.map((r) => r.map((f) => '"' + String(f).replace(/"/g, '""') + '"').join(",")).join("\n");
   }
+  // Data-privacy retention: drop stored leads older than `days` (0/undefined = keep).
+  function purgeOldLeads(days) {
+    days = Number(days);
+    if (!days || days <= 0) return 0;
+    const cutoff = Date.now() - days * 86400000;
+    const db = load();
+    let removed = 0;
+    for (const id in db.locations) {
+      const L = db.locations[id];
+      if (Array.isArray(L.leads)) {
+        const before = L.leads.length;
+        L.leads = L.leads.filter((l) => { const t = Date.parse(l && l.ts); return isNaN(t) || t >= cutoff; });
+        removed += before - L.leads.length;
+      }
+    }
+    if (removed) save(db);
+    return removed;
+  }
   function leadsCSV() {
     const db = load();
     const rows = [["Timestamp", "Location", "Email", "Mobile", "Consent"]];
@@ -151,6 +182,7 @@
     for (const id in db.locations) {
       const L = db.locations[id];
       for (const k in L.totals) agg.totals[k] = (agg.totals[k] || 0) + (L.totals[k] || 0);
+      if (L.ab) { agg.ab = agg.ab || {}; for (const v in L.ab) { agg.ab[v] = agg.ab[v] || {}; for (const k in L.ab[v]) agg.ab[v][k] = (agg.ab[v][k] || 0) + L.ab[v][k]; } }
       for (const sku in L.perSku) agg.perSku[sku] = (agg.perSku[sku] || 0) + L.perSku[sku];
       for (const day in L.perDay) {
         agg.perDay[day] = agg.perDay[day] || {};
@@ -259,9 +291,9 @@
   function shadeHex(id) { const s = (resolvedConfig().shades || []).find((x) => x.id === id); return s ? s.hex : "#888888"; }
 
   window.Analytics = {
-    KEY, load, save, track, addLead, leadsCSV, logCoupon, couponsCSV, avgDwellSec, consolidate, mergeImport,
+    KEY, load, save, track, addLead, leadsCSV, purgeOldLeads, logCoupon, couponsCSV, avgDwellSec, consolidate, mergeImport,
     exportLocation, seedDemo, clearAll, currentLocation, ensureLoc, shadeName, shadeHex,
-    dayKey, resolvedConfig, isQrLanding, urlLoc,
+    dayKey, resolvedConfig, isQrLanding, urlLoc, setVariant,
   };
 
   /* ---- shared render helpers for the dashboards ---- */
