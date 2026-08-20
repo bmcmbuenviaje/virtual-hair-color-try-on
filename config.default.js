@@ -136,7 +136,9 @@ window.ICOLOR_DEFAULT_CONFIG = {
   // (buyUrl / buyImg / buyPrice), edited in Admin and Super Admin.
   //   Shopee/Lazada: enter image + price manually (their pages can't be auto-read).
   //   Shopify: "Auto-fill" pulls image + price from the product URL.
-  commerce: { currency: "₱", buttonLabel: "Add to Cart", showQr: true },
+  //   checkout: "product" (open the product page) | "cart" (Shopify add-to-cart)
+  //     | "discount" (Shopify add-to-cart with the session coupon/voucher applied).
+  commerce: { currency: "₱", buttonLabel: "Add to Cart", showQr: true, checkout: "product" },
 
   // Language. codes: "en" | "tl".
   lang: { default: "en", enabled: ["en", "tl"] },

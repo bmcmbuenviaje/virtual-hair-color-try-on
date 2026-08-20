@@ -2242,18 +2242,41 @@ function renderShopCard(shade) {
   const on = FEATURES.commerce && shade && shade.hex && shade.buyUrl;
   if (!on || gridMode) { card.classList.add("hidden"); return; }
   const cm = CONFIG.commerce || {};
-  const img = $("shopImg"), buy = $("shopBuy"), qr = $("shopQr");
+  const img = $("shopImg"), buy = $("shopBuy"), qr = $("shopQr"), badge = $("shopStock");
   if (shade.buyImg) { img.src = shade.buyImg; img.style.display = ""; } else img.style.display = "none";
   $("shopName").textContent = shade.name;
   $("shopPrice").textContent = shade.buyPrice ? (cm.currency || "") + shade.buyPrice : "";
-  buy.textContent = cm.buttonLabel || "Add to Cart";
-  buy.href = shade.buyUrl;
-  buy.onclick = () => { try { trk("shopclick", { sku: shade.id }); } catch (e) {} };
-  // QR to buy on the customer's own phone
+  const soldOut = shade.buyAvail === false;
+  // stock badge (from Shopify auto-fill or the manual in-stock toggle)
+  if (badge) {
+    if (soldOut) { badge.textContent = "Sold out"; badge.className = "shop-stock out"; badge.style.display = ""; }
+    else if (shade.buyAvail === true) { badge.textContent = "In stock"; badge.className = "shop-stock in"; badge.style.display = ""; }
+    else badge.style.display = "none";
+  }
+  // the URL the button/QR points at (product page, Shopify cart, or cart+discount)
+  const buildUrl = (code) => (window.Commerce && window.Commerce.buildBuyUrl) ? window.Commerce.buildBuyUrl(shade, CONFIG, code) : shade.buyUrl;
+  const staticUrl = buildUrl(null);
+  buy.textContent = soldOut ? "Sold out" : (cm.buttonLabel || "Add to Cart");
+  buy.classList.toggle("disabled", soldOut);
+  buy.href = staticUrl;
+  buy.onclick = async (e) => {
+    if (soldOut) { e.preventDefault(); return; }
+    try { trk("shopclick", { sku: shade.id }); } catch (err) {}
+    // "discount" mode: claim/resolve the session coupon and apply it at checkout
+    if ((cm.checkout === "discount") && shade.buyVariant && FEATURES.coupon && CONFIG.coupon && CONFIG.coupon.enabled) {
+      e.preventDefault();
+      const w = window.open("about:blank", "_blank"); // open synchronously to survive popup blockers
+      let url = staticUrl;
+      try { url = buildUrl(await ensureSessionCoupon()); } catch (err) {}
+      if (w) w.location.href = url; else window.location.href = url;
+    }
+    // otherwise the anchor navigates to staticUrl (product page or cart permalink)
+  };
+  // QR to buy on the customer's own phone (product / cart URL)
   if (qr) {
-    if (cm.showQr !== false && window.qrcode) {
+    if (cm.showQr !== false && !soldOut && window.qrcode) {
       try {
-        const q = window.qrcode(0, "M"); q.addData(shade.buyUrl); q.make();
+        const q = window.qrcode(0, "M"); q.addData(staticUrl); q.make();
         qr.innerHTML = q.createSvgTag({ cellSize: 3, margin: 0, scalable: true });
         qr.style.display = "";
       } catch (e) { qr.style.display = "none"; }
