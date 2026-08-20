@@ -27,18 +27,46 @@
     ["readOnly", "View-only (client can't save)"],
   ];
 
-  const FEATURE_LABELS = [
-    ["photo", "Take photo"], ["video", "Record video (30s)"], ["upload", "Upload selfie"],
-    ["split", "Before/after split"], ["grid", "Compare grid"], ["brighten", "Brighten toggle"],
-    ["analysis", "Hair & skin analysis"], ["statement", "Statement colours"], ["vibe", "Vibe filter"],
-    ["ratePicks", "Rate your picks"], ["cards", "Save/Share cards"], ["print", "Print (A5)"],
-    ["watermark", "Watermark captures"], ["qr", "QR to phone"], ["promo", "Promo banner"],
-    ["coupon", "Coupon on report"], ["leads", "Lead capture"], ["heatmap", "Time-of-day / heatmap"],
-    ["getlook", "Get this look"], ["multilang", "Tagalog / English"], ["offline", "Offline mode"],
-    ["attract", "Attract / idle mirror"], ["commerce", "Shop the look (ecommerce) — paid"],
-    ["camguide", "Camera fit guidance"],
+  // Grouped feature catalog [key, label, description] — drives the toggle UI.
+  const FEATURE_GROUPS = [
+    { title: "Capture", items: [
+      ["photo", "Take photo", "Snap a still of the look"],
+      ["video", "Record video", "Up to a 30-second clip"],
+      ["upload", "Upload selfie", "Try a shade on an uploaded photo"],
+      ["watermark", "Watermark", "Stamp captures with the brand"],
+    ] },
+    { title: "Try-on experience", items: [
+      ["split", "Before / after", "Split-screen compare"],
+      ["grid", "Compare grid", "See every shade at once"],
+      ["brighten", "Brighten", "Preview on pre-lightened hair"],
+      ["getlook", "Get this look", "Match a shade from a photo"],
+      ["camguide", "Camera guidance", "Face-fit + lighting help"],
+      ["attract", "Attract mode", "Idle camera-mirror teaser"],
+      ["multilang", "Tagalog / English", "Language toggle"],
+      ["offline", "Offline mode", "Works without internet"],
+    ] },
+    { title: "Analysis & advice", items: [
+      ["analysis", "Hair & skin analysis", "Undertone + recommendations"],
+      ["statement", "Statement colours", "Bold shade suggestions"],
+      ["vibe", "Vibe filter", "Natural / bold / low-maintenance"],
+      ["ratePicks", "Rate your picks", "Score the chosen shades"],
+    ] },
+    { title: "Sharing & output", items: [
+      ["cards", "Save / share cards", "Social-ready result cards"],
+      ["print", "Print (A5)", "Printed analysis report"],
+      ["qr", "QR to phone", "Continue on the customer's phone"],
+    ] },
+    { title: "Marketing & commerce", items: [
+      ["promo", "Promo banner", "Shade of the week"],
+      ["coupon", "Coupon on report", "Voucher on the A5 report"],
+      ["leads", "Lead capture", "Opt-in email / mobile"],
+      ["commerce", "Shop the look", "Ecommerce buy card — paid"],
+    ] },
+    { title: "Insights", items: [
+      ["heatmap", "Heatmap & dwell", "Time-of-day + dwell time"],
+    ] },
   ];
-  const ALLF = FEATURE_LABELS.map((f) => f[0]);
+  const ALLF = FEATURE_GROUPS.reduce((a, g) => a.concat(g.items.map((i) => i[0])), []);
   const PRESETS = {
     basic: { label: "Basic", maxShades: 5, on: ["photo", "qr", "offline"] },
     standard: { label: "Standard", maxShades: null, on: ["photo", "video", "upload", "split", "grid", "brighten", "cards", "qr", "promo", "multilang", "offline"] },
@@ -138,10 +166,19 @@
     );
   }
   function renderFeatures() {
-    $("features").innerHTML = FEATURE_LABELS.map(([k, l]) => `<label class="feat"><input type="checkbox" data-feat="${k}" ${cfg.features[k] ? "checked" : ""}/> ${l}</label>`).join("");
+    $("features").innerHTML = FEATURE_GROUPS.map((g) =>
+      `<div class="feat-group"><div class="feat-group-title">${g.title}</div><div class="feat-grid">` +
+      g.items.map(([k, l, d]) =>
+        `<label class="feat ${cfg.features[k] ? "on" : ""}">` +
+          `<span class="feat-txt"><span class="feat-name">${l}</span><span class="feat-desc">${d || ""}</span></span>` +
+          `<span class="switch"><input type="checkbox" data-feat="${k}" ${cfg.features[k] ? "checked" : ""}/><span class="slider"></span></span>` +
+        `</label>`
+      ).join("") + `</div></div>`
+    ).join("");
     $("features").querySelectorAll("[data-feat]").forEach((c) =>
       c.addEventListener("change", () => {
         cfg.features[c.dataset.feat] = c.checked;
+        const lab = c.closest(".feat"); if (lab) lab.classList.toggle("on", c.checked);
         cfg.tier = activePreset() === "custom" ? "Custom" : PRESETS[activePreset()].label;
         if ($("tierName")) $("tierName").value = cfg.tier;
         renderPresets();
