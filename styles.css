@@ -70,6 +70,33 @@ html, body {
 .status-pill { font-size: 11px; font-weight: 800; letter-spacing: 0.3px; white-space: nowrap; }
 .status-pill.status-on { color: #6bbf59; }
 .status-pill.status-off { color: #c77; }
+/* Shop the look — in-camera product card */
+.shop-card { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); z-index: 15;
+  display: flex; align-items: center; gap: 12px; max-width: min(92%, 460px);
+  background: rgba(15,12,20,0.86); border: 1px solid var(--ring); border-radius: 14px;
+  padding: 10px 12px; backdrop-filter: blur(8px); box-shadow: 0 8px 26px rgba(0,0,0,0.45); }
+.shop-card.hidden { display: none; }
+.shop-img { width: 52px; height: 52px; border-radius: 10px; object-fit: cover; background: #fff; flex: 0 0 auto; }
+.shop-info { min-width: 0; flex: 1 1 auto; }
+.shop-name { font-size: 13.5px; font-weight: 700; color: var(--text); line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.shop-price { font-size: 14px; font-weight: 800; color: var(--accent-2); margin-top: 2px; }
+.shop-buy { flex: 0 0 auto; border: none; border-radius: 999px; padding: 9px 16px; font-weight: 800; font-size: 13px;
+  color: #fff; background: linear-gradient(135deg, var(--accent), var(--accent-2)); text-decoration: none; white-space: nowrap; }
+.shop-buy:active { transform: translateY(1px); }
+.shop-qr { width: 46px; height: 46px; background: #fff; border-radius: 8px; padding: 3px; flex: 0 0 auto; line-height: 0; }
+.shop-qr svg { width: 100%; height: 100%; display: block; }
+@media (max-width: 480px) { .shop-qr { display: none; } .shop-card { bottom: 96px; } }
+/* Shop-the-look per-SKU editor (admin + super admin) */
+.cm-row { border: 1px solid var(--ring); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; background: rgba(255,255,255,0.03); }
+.cm-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.cm-swatch { width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); flex: 0 0 auto; }
+.cm-name { font-weight: 700; font-size: 13.5px; flex: 1 1 auto; }
+.cm-thumb { width: 34px; height: 34px; border-radius: 6px; object-fit: cover; background: #fff; }
+.cm-fields { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.cm-fields input[type=text] { padding: 8px; border-radius: 8px; border: 1px solid var(--ring); background: rgba(0,0,0,0.3); color: var(--text); font-size: 12.5px; }
+.cm-fields .cm-url { flex: 1 1 220px; min-width: 180px; }
+.cm-fields .cm-price { width: 90px; }
+.cm-fields .cm-img { flex: 1 1 160px; min-width: 140px; }
 /* ---- Accessibility ---- */
 :focus-visible { outline: 3px solid var(--accent-2, #b8942f); outline-offset: 2px; }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible,

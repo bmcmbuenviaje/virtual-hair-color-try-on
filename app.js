@@ -2232,6 +2232,34 @@ function selectShade(shade) {
   if (!gridMode) popShadeLabel(shade);
   invalidate();
   if (shade.hex) trk("tryon", { sku: shade.id }); // count try-ons per SKU
+  renderShopCard(shade);
+}
+
+/* ---- "Shop the look" in-camera product card (paid feature) ---- */
+function renderShopCard(shade) {
+  const card = $("shopCard");
+  if (!card) return;
+  const on = FEATURES.commerce && shade && shade.hex && shade.buyUrl;
+  if (!on || gridMode) { card.classList.add("hidden"); return; }
+  const cm = CONFIG.commerce || {};
+  const img = $("shopImg"), buy = $("shopBuy"), qr = $("shopQr");
+  if (shade.buyImg) { img.src = shade.buyImg; img.style.display = ""; } else img.style.display = "none";
+  $("shopName").textContent = shade.name;
+  $("shopPrice").textContent = shade.buyPrice ? (cm.currency || "") + shade.buyPrice : "";
+  buy.textContent = cm.buttonLabel || "Add to Cart";
+  buy.href = shade.buyUrl;
+  buy.onclick = () => { try { trk("shopclick", { sku: shade.id }); } catch (e) {} };
+  // QR to buy on the customer's own phone
+  if (qr) {
+    if (cm.showQr !== false && window.qrcode) {
+      try {
+        const q = window.qrcode(0, "M"); q.addData(shade.buyUrl); q.make();
+        qr.innerHTML = q.createSvgTag({ cellSize: 3, margin: 0, scalable: true });
+        qr.style.display = "";
+      } catch (e) { qr.style.display = "none"; }
+    } else qr.style.display = "none";
+  }
+  card.classList.remove("hidden");
 }
 
 function popShadeLabel(shade) {

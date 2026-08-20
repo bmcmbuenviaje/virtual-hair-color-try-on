@@ -264,6 +264,7 @@
     hide("card-promo", !!F.promo);
     hide("card-coupon", !!F.coupon);
     hide("card-print", !!F.print);
+    hide("card-commerce", !!F.commerce);
     const al = $("analyticsLink"); if (al) al.style.display = ca.showAnalytics ? "" : "none";
     const sb = $("save"); const rb = $("reset");
     if (ca.readOnly) {
@@ -280,6 +281,7 @@
     renderShades();
     renderPreview();
     renderContentEditors();
+    if (window.CommerceEditor) window.CommerceEditor.mount(cfg, $("commerceRows"), { toast: toast });
     applyClientPerms();
   }
 

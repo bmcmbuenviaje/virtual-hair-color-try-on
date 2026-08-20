@@ -66,6 +66,7 @@ window.ICOLOR_DEFAULT_CONFIG = {
     multilang: true,   // Tagalog / English toggle
     offline: true,     // offline PWA cache
     attract: false,    // kiosk attract / idle camera-mirror teaser
+    commerce: false,   // "shop the look" ecommerce product card (PAID add-on)
   },
 
   // Shade-of-the-week promo banner (Super Admin sets; shows on the start screen).
@@ -127,6 +128,15 @@ window.ICOLOR_DEFAULT_CONFIG = {
   // Turned on/off by features.attract (Super Admin); these are just the tuning params:
   // idle delay, teaser shade (blank = first shade), and the call-to-action text.
   attract: { idleMs: 45000, shadeId: "", cta: "Tap to try your color" },
+
+  // "Shop the look" ecommerce card (PAID; gated by features.commerce). When on and a
+  // shade has a buyUrl, a product card appears at the bottom of the camera frame with
+  // the product image, name (= shade name), price, an Add-to-Cart button and a QR to
+  // buy on the customer's phone. Per-SKU links/images/prices live on each shade
+  // (buyUrl / buyImg / buyPrice), edited in Admin and Super Admin.
+  //   Shopee/Lazada: enter image + price manually (their pages can't be auto-read).
+  //   Shopify: "Auto-fill" pulls image + price from the product URL.
+  commerce: { currency: "₱", buttonLabel: "Add to Cart", showQr: true },
 
   // Language. codes: "en" | "tl".
   lang: { default: "en", enabled: ["en", "tl"] },

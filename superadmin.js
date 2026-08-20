@@ -35,14 +35,14 @@
     ["watermark", "Watermark captures"], ["qr", "QR to phone"], ["promo", "Promo banner"],
     ["coupon", "Coupon on report"], ["leads", "Lead capture"], ["heatmap", "Time-of-day / heatmap"],
     ["getlook", "Get this look"], ["multilang", "Tagalog / English"], ["offline", "Offline mode"],
-    ["attract", "Attract / idle mirror"],
+    ["attract", "Attract / idle mirror"], ["commerce", "Shop the look (ecommerce) — paid"],
   ];
   const ALLF = FEATURE_LABELS.map((f) => f[0]);
   const PRESETS = {
     basic: { label: "Basic", maxShades: 5, on: ["photo", "qr", "offline"] },
     standard: { label: "Standard", maxShades: null, on: ["photo", "video", "upload", "split", "grid", "brighten", "cards", "qr", "promo", "multilang", "offline"] },
     pro: { label: "Pro", maxShades: null, on: ["photo", "video", "upload", "split", "grid", "brighten", "analysis", "statement", "vibe", "ratePicks", "cards", "qr", "promo", "getlook", "heatmap", "multilang", "offline"] },
-    allin: { label: "All-in", maxShades: null, on: ALLF.filter((k) => k !== "watermark" && k !== "attract") },
+    allin: { label: "All-in", maxShades: null, on: ALLF.filter((k) => k !== "watermark" && k !== "attract" && k !== "commerce") },
   };
 
   function resolved() { return A.resolvedConfig(); }
@@ -218,6 +218,7 @@
   function renderConfig() {
     if ($("tierName")) $("tierName").value = cfg.tier || "";
     renderPresets(); renderFeatures(); renderBackend(); renderPerms(); renderContentEditors();
+    if (window.CommerceEditor) window.CommerceEditor.mount(cfg, $("commerceRows"), { toast: toast });
   }
   function wireConfig() {
     wireContentEditors();
