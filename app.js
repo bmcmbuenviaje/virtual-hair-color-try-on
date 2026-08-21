@@ -2984,6 +2984,7 @@ function resolvedPromo() {
       title: p0.ab.title || p0.title,
       message: p0.ab.message || p0.message,
       shadeId: p0.ab.shadeId || p0.shadeId,
+      image: p0.ab.image || p0.image,
     });
   }
   return p0;
@@ -3003,8 +3004,8 @@ function promoSet() {
   const p = CONFIG.promo || {};
   const set = [{ label: "A", title: p.title, message: p.message, shadeId: p.shadeId, image: p.image }];
   const b = p.ab || {};
-  if (b.enabled || b.title || b.message || b.shadeId) {
-    set.push({ label: "B", title: b.title || p.title, message: b.message || p.message, shadeId: b.shadeId || p.shadeId, image: p.image });
+  if (b.enabled || b.title || b.message || b.shadeId || b.image) {
+    set.push({ label: "B", title: b.title || p.title, message: b.message || p.message, shadeId: b.shadeId || p.shadeId, image: b.image || p.image });
   }
   (p.campaigns || []).forEach((c, i) => {
     if (!c) return;

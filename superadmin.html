@@ -77,6 +77,13 @@
         <div class="field" style="flex:1;min-width:200px"><label>B · Title</label><input id="promoBTitle" type="text" placeholder="(defaults to A)" /></div>
       </div>
       <div class="field" style="margin-top:10px"><label>B · Message</label><input id="promoBMsg" type="text" placeholder="(defaults to A)" /></div>
+      <div class="row" style="gap:10px;margin-top:8px;align-items:center;flex-wrap:wrap">
+        <button id="promoBUpload" class="btn ghost sm" type="button">⬆ B poster</button>
+        <input id="promoBFile" type="file" accept="image/*" hidden />
+        <button id="promoBClear" class="btn ghost sm" type="button">Clear B poster</button>
+        <img id="promoBPrev" style="height:56px;border-radius:8px;border:1px solid var(--ring);display:none" />
+        <span class="hint" style="color:var(--muted);font-size:12px">B's own poster (defaults to A's).</span>
+      </div>
       <div class="row" style="gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:14px">
         <div class="field" style="min-width:170px"><label>Auto-rotate every (sec, 0 = off)</label><input id="promoRotate" type="number" min="0" class="num" style="width:120px" /></div>
         <button id="promoAddCampaign" class="btn ghost sm" type="button">+ Add campaign</button>

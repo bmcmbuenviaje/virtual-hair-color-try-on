@@ -79,7 +79,7 @@ window.ICOLOR_DEFAULT_CONFIG = {
     image: "",            // uploaded poster as a data: URL (optional, overrides card)
     // A/B test: when ab.enabled, each session is randomly shown variant A (the
     // fields above) or B (below); conversions are tallied per variant in Super Admin.
-    ab: { enabled: false, title: "", message: "", shadeId: "" },
+    ab: { enabled: false, title: "", message: "", shadeId: "", image: "" },
     // Show the promo as a tappable full-screen POPUP (with the CTA below) on the
     // start screen, instead of only the inline banner.
     popup: false,
