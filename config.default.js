@@ -66,29 +66,29 @@ window.ICOLOR_DEFAULT_CONFIG = {
     multilang: true,   // Tagalog / English toggle
     offline: true,     // offline PWA cache
     attract: false,    // kiosk attract / idle camera-mirror teaser
-    commerce: false,   // "shop the look" ecommerce product card (PAID add-on)
+    commerce: true,    // "shop the look" ecommerce product card (PAID add-on)
     camguide: true,    // camera fit guidance (positioning oval + low-light hint)
   },
 
   // Shade-of-the-week promo banner (Super Admin sets; shows on the start screen).
   promo: {
-    enabled: false,
-    shadeId: "",          // featured shade id (optional)
+    enabled: true,
+    shadeId: "burgundy",  // featured shade id (optional)
     title: "Shade of the Week",
-    message: "",          // campaign copy
+    message: "Burgundy — 20% off in-store this week.",
     image: "",            // uploaded poster as a data: URL (optional, overrides card)
     // A/B test: when ab.enabled, each session is randomly shown variant A (the
     // fields above) or B (below); conversions are tallied per variant in Super Admin.
-    ab: { enabled: false, title: "", message: "", shadeId: "", image: "" },
+    ab: { enabled: true, title: "New Arrival", message: "Wild Cherry — bold & glossy.", shadeId: "wild-cherry", image: "" },
     // Show the promo as a tappable full-screen POPUP (with the CTA below) on the
     // start screen, instead of only the inline banner.
     popup: false,
     popupText: "Tap the screen, and try-on our iColor products!",
     // Extra campaigns to rotate through (beyond variant A above and B in `ab`).
-    campaigns: [], // [{ title, message, shadeId, image }]
+    campaigns: [{ title: "Pastel Season", message: "Ash Pink — soft & trendy.", shadeId: "ash-pink", image: "" }],
     // Auto-rotate the banner + popup through all variants/campaigns every N seconds
     // (0 = off). While rotating, conversions are attributed to the shown variant.
-    rotateSec: 0,
+    rotateSec: 5,
   },
 
   // Coupon on the A5 report.
@@ -169,16 +169,16 @@ window.ICOLOR_DEFAULT_CONFIG = {
   // The full colour catalog. `hidden: true` keeps a shade out of the app
   // without deleting it. Order here is the order shown in the app.
   shades: [
-    { id: "natural-black", name: "Natural Black", hex: "#1A1A1A", collection: "Flagship", tone: "neutral", statement: false, hidden: false },
+    { id: "natural-black", name: "Natural Black", hex: "#1A1A1A", collection: "Flagship", tone: "neutral", statement: false, hidden: false, buyUrl: "https://shopee.ph/search?keyword=iColor%20Plus%20Natural%20Black", buyPrice: "299", buyAvail: true },
     { id: "dark-brown", name: "Dark Brown", hex: "#3D2314", collection: "Flagship", tone: "warm", statement: false, hidden: false },
     { id: "medium-brown", name: "Medium Brown", hex: "#5C3A21", collection: "Flagship", tone: "warm", statement: false, hidden: false },
     { id: "light-brown", name: "Light Brown", hex: "#8B5A2B", collection: "Flagship", tone: "warm", statement: false, hidden: false },
     { id: "chestnut-brown", name: "Chestnut Brown", hex: "#7B3F00", collection: "Flagship", tone: "warm", statement: true, hidden: false },
-    { id: "burgundy", name: "Burgundy", hex: "#800020", collection: "Flagship", tone: "cool", statement: true, hidden: false },
-    { id: "wild-cherry", name: "Wild Cherry", hex: "#9B111E", collection: "Flagship", tone: "warm", statement: true, hidden: false },
+    { id: "burgundy", name: "Burgundy", hex: "#800020", collection: "Flagship", tone: "cool", statement: true, hidden: false, buyUrl: "https://shopee.ph/search?keyword=iColor%20Plus%20Burgundy", buyPrice: "349", buyAvail: true },
+    { id: "wild-cherry", name: "Wild Cherry", hex: "#9B111E", collection: "Flagship", tone: "warm", statement: true, hidden: false, buyUrl: "https://shopee.ph/search?keyword=iColor%20Plus%20Wild%20Cherry", buyPrice: "349", buyAvail: true },
     { id: "triple-color-changer", name: "Triple Color Changer", hex: "#A67B5B", collection: "Flagship", tone: "warm", statement: false, hidden: false },
     { id: "ash-gray", name: "Ash Gray", hex: "#B2BEB5", collection: "Ash & Crème", tone: "cool", statement: false, hidden: false },
-    { id: "ash-pink", name: "Ash Pink", hex: "#F2A2B1", collection: "Ash & Crème", tone: "cool", statement: true, hidden: false },
+    { id: "ash-pink", name: "Ash Pink", hex: "#F2A2B1", collection: "Ash & Crème", tone: "cool", statement: true, hidden: false, buyUrl: "https://shopee.ph/search?keyword=iColor%20Plus%20Ash%20Pink", buyPrice: "379", buyAvail: true },
     { id: "ash-purple", name: "Ash Purple", hex: "#7851A9", collection: "Ash & Crème", tone: "cool", statement: true, hidden: false },
     { id: "ash-blue", name: "Ash Blue", hex: "#4A6B82", collection: "Ash & Crème", tone: "cool", statement: true, hidden: false },
     { id: "mahogany", name: "Mahogany", hex: "#4A2511", collection: "Ash & Crème", tone: "warm", statement: true, hidden: false },
