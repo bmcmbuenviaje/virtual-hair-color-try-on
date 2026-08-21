@@ -95,6 +95,9 @@ const SHADES = [{ id: "none", name: "Off", hex: null, collection: null }];
     SHADES.push({
       id: s.id, name: s.name, hex: s.hex, collection: s.collection || null,
       tone: s.tone || "neutral", statement: !!s.statement,
+      // commerce ("shop the look") fields — needed for the in-camera product card
+      buyUrl: s.buyUrl || "", buyImg: s.buyImg || "", buyPrice: s.buyPrice || "",
+      buyVariant: s.buyVariant, buyAvail: s.buyAvail,
     })
   );
 
@@ -2994,12 +2997,54 @@ function promoInnerHTML(p) {
     (shade ? `<div class="p-title">${shade.name}</div>` : "") +
     `<div class="p-msg">${p.message || ""}</div></div></div>`;
 }
+// The full set of campaigns to rotate through: A, B (if set), then extra campaigns.
+let _promoRotateTimer = null, _promoIdx = 0;
+function promoSet() {
+  const p = CONFIG.promo || {};
+  const set = [{ label: "A", title: p.title, message: p.message, shadeId: p.shadeId, image: p.image }];
+  const b = p.ab || {};
+  if (b.enabled || b.title || b.message || b.shadeId) {
+    set.push({ label: "B", title: b.title || p.title, message: b.message || p.message, shadeId: b.shadeId || p.shadeId, image: p.image });
+  }
+  (p.campaigns || []).forEach((c, i) => {
+    if (!c) return;
+    set.push({ label: String.fromCharCode(67 + i), title: c.title || p.title, message: c.message || p.message, shadeId: c.shadeId || p.shadeId, image: c.image || p.image });
+  });
+  return set;
+}
+function promoRotating() {
+  const p = CONFIG.promo || {};
+  return p.rotateSec > 0 && promoSet().length > 1;
+}
+// The promo to show right now: rotating campaign, else the A/B-resolved one.
+function activePromo() {
+  if (promoRotating()) {
+    const set = promoSet(), c = set[_promoIdx % set.length];
+    try { window.Analytics && window.Analytics.setVariant(c.label); } catch (e) {}
+    return c;
+  }
+  return resolvedPromo();
+}
+function startPromoRotation() {
+  clearInterval(_promoRotateTimer);
+  if (!(FEATURES.promo && (CONFIG.promo || {}).enabled && promoRotating())) return;
+  const secs = Math.max(2, CONFIG.promo.rotateSec);
+  _promoRotateTimer = setInterval(() => {
+    _promoIdx = (_promoIdx + 1) % promoSet().length;
+    const banner = $("promoBanner");
+    if (banner && !banner.classList.contains("hidden")) renderPromoBanner();
+    const modal = $("promoModal");
+    if (modal && !modal.classList.contains("hidden")) {
+      const body = $("promoModalBody"); if (body) body.innerHTML = promoInnerHTML(activePromo());
+    }
+  }, secs * 1000);
+}
 function renderPromoBanner() {
   const box = $("promoBanner");
   if (!box) return;
   const p0 = CONFIG.promo || {};
   if (!(FEATURES.promo && p0.enabled)) { box.classList.add("hidden"); return; }
-  const p = resolvedPromo();
+  const p = activePromo();
   box.classList.remove("hidden");
   box.innerHTML = promoInnerHTML(p);
   box.style.cursor = "pointer";
@@ -3009,16 +3054,17 @@ function renderPromoBanner() {
 /* ---- Promo / campaign popup (start screen + idle attract) ---- */
 function openPromoModal() {
   const m = $("promoModal"); if (!m) return;
-  const p = resolvedPromo();
+  const p = activePromo();
   const body = $("promoModalBody"); if (body) body.innerHTML = promoInnerHTML(p);
   const cta = $("promoModalCta"); if (cta) cta.textContent = (CONFIG.promo || {}).popupText || "Tap the screen, and try-on our iColor products!";
   m.classList.remove("hidden");
+  startPromoRotation();
 }
 function closePromoModal(start) {
   const m = $("promoModal"); if (m) m.classList.add("hidden");
   attractActive = false;
   if (start) {
-    const p = resolvedPromo();
+    const p = activePromo();
     if (p.shadeId) pendingPromoShade = p.shadeId;
     if (startBtn) startBtn.click();
   } else {
@@ -3107,6 +3153,7 @@ function handleQrLanding() {
 (function initAbVariant() {
   const p = CONFIG.promo || {};
   if (!(FEATURES.promo && p.enabled && p.ab && p.ab.enabled)) return;
+  if (p.rotateSec > 0 && promoSet().length > 1) return; // rotation controls the variant instead
   let v = "A";
   try {
     v = sessionStorage.getItem("icolorVariant");
@@ -3116,6 +3163,7 @@ function handleQrLanding() {
   try { window.Analytics && window.Analytics.setVariant(v); } catch (e) {}
 })();
 renderPromoBanner();
+startPromoRotation();
 renderQR();
 handleQrLanding();
 // Promo popup on the start screen (skip if the visitor arrived from a QR scan).

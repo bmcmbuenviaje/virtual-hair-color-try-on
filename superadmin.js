@@ -87,7 +87,7 @@
     );
     cfg.features = cfg.features || {};
     ALLF.forEach((k) => { if (typeof cfg.features[k] !== "boolean") cfg.features[k] = false; });
-    cfg.promo = Object.assign({ enabled: false, shadeId: "", title: "Shade of the Week", message: "", image: "", popup: false, popupText: "Tap the screen, and try-on our iColor products!" }, cfg.promo || {});
+    cfg.promo = Object.assign({ enabled: false, shadeId: "", title: "Shade of the Week", message: "", image: "", popup: false, popupText: "Tap the screen, and try-on our iColor products!", campaigns: [], rotateSec: 0 }, cfg.promo || {});
     cfg.promo.ab = Object.assign({ enabled: false, title: "", message: "", shadeId: "" }, cfg.promo.ab || {});
     cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true, source: "generated" }, cfg.coupon || {});
     cfg.printLayout = Object.assign({ title: "Personalized Hair Colour Analysis", accentFrom: "#5f7d2e", accentTo: "#b8942f", footer: "", showBrighten: true, showMatches: true }, cfg.printLayout || {});
@@ -190,6 +190,27 @@
     if ($("beUrl")) $("beUrl").value = cfg.backend.url || "";
   }
   /* ---- promo / coupon / print override editors (edit content on behalf of the client) ---- */
+  function renderCampaigns() {
+    const box = $("promoCampaigns"); if (!box) return;
+    const shades = (cfg.shades || []).filter((s) => s.hex);
+    const esc2 = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+    const opts = (sel) => `<option value="">— shade: same as A —</option>` + shades.map((s) => `<option value="${s.id}" ${sel === s.id ? "selected" : ""}>${s.name}</option>`).join("");
+    box.innerHTML = (cfg.promo.campaigns || []).map((c, i) =>
+      `<div class="cm-row" data-i="${i}"><div class="cm-fields">` +
+      `<input class="pc-title" type="text" placeholder="Campaign title" value="${esc2(c.title)}" />` +
+      `<input class="pc-msg" type="text" placeholder="Message" value="${esc2(c.message)}" />` +
+      `<select class="pc-shade">${opts(c.shadeId || "")}</select>` +
+      `<button class="pc-del btn ghost sm" type="button">Remove</button>` +
+      `</div></div>`
+    ).join("");
+    box.querySelectorAll(".cm-row").forEach((row) => {
+      const i = +row.dataset.i, c = cfg.promo.campaigns[i]; if (!c) return;
+      row.querySelector(".pc-title").addEventListener("input", (e) => (c.title = e.target.value));
+      row.querySelector(".pc-msg").addEventListener("input", (e) => (c.message = e.target.value));
+      row.querySelector(".pc-shade").addEventListener("change", (e) => (c.shadeId = e.target.value));
+      row.querySelector(".pc-del").addEventListener("click", () => { cfg.promo.campaigns.splice(i, 1); renderCampaigns(); });
+    });
+  }
   function renderContentEditors() {
     if ($("promoEnabled")) {
       $("promoEnabled").checked = !!cfg.promo.enabled;
@@ -208,6 +229,8 @@
       $("promoBShade").innerHTML = `<option value="">— same as A —</option>` + shades.map((s) => `<option value="${s.id}" ${cfg.promo.ab.shadeId === s.id ? "selected" : ""}>${s.name}</option>`).join("");
       $("promoBTitle").value = cfg.promo.ab.title || "";
       $("promoBMsg").value = cfg.promo.ab.message || "";
+      if ($("promoRotate")) $("promoRotate").value = cfg.promo.rotateSec || 0;
+      renderCampaigns();
     }
     if ($("couponEnabled")) {
       $("couponEnabled").checked = !!cfg.coupon.enabled;
@@ -255,6 +278,8 @@
     on("promoBShade", "change", (e) => (cfg.promo.ab.shadeId = e.target.value));
     on("promoBTitle", "input", (e) => (cfg.promo.ab.title = e.target.value));
     on("promoBMsg", "input", (e) => (cfg.promo.ab.message = e.target.value));
+    on("promoRotate", "input", (e) => (cfg.promo.rotateSec = parseInt(e.target.value, 10) || 0));
+    on("promoAddCampaign", "click", () => { cfg.promo.campaigns.push({ title: "", message: "", shadeId: "" }); renderCampaigns(); });
     on("promoUpload", "click", () => $("promoFile").click());
     on("promoFile", "change", (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (!f) return; const rd = new FileReader(); rd.onload = () => { cfg.promo.image = rd.result; renderContentEditors(); }; rd.readAsDataURL(f); });
     on("promoClear", "click", () => { cfg.promo.image = ""; renderContentEditors(); });

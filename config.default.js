@@ -84,6 +84,11 @@ window.ICOLOR_DEFAULT_CONFIG = {
     // start screen, instead of only the inline banner.
     popup: false,
     popupText: "Tap the screen, and try-on our iColor products!",
+    // Extra campaigns to rotate through (beyond variant A above and B in `ab`).
+    campaigns: [], // [{ title, message, shadeId, image }]
+    // Auto-rotate the banner + popup through all variants/campaigns every N seconds
+    // (0 = off). While rotating, conversions are attributed to the shown variant.
+    rotateSec: 0,
   },
 
   // Coupon on the A5 report.
