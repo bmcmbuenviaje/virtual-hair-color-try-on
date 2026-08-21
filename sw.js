@@ -1,8 +1,8 @@
 /* iColor Plus — service worker (offline kiosk cache) */
-const CACHE = "icolor-v2";
+const CACHE = "icolor-v3";
 const SHELL = [
   "./", "index.html", "app.js", "analytics.js", "backend.js", "config.default.js",
-  "styles.css", "manifest.webmanifest", "assets/logo.svg",
+  "config.local.js", "commerce.js", "styles.css", "manifest.webmanifest", "assets/logo.svg",
   // vendored libs so the backend + QR work fully offline (no CDN dependency)
   "assets/vendor/pocketbase.umd.js", "assets/vendor/qrcode.js",
 ];
@@ -28,21 +28,30 @@ self.addEventListener("fetch", (e) => {
   const sameOrigin = url.origin === self.location.origin;
   const runtimeCdn = RUNTIME_HOSTS.includes(url.hostname);
   if (!sameOrigin && !runtimeCdn) return; // don't touch other requests
-  // Never cache backend API / admin traffic — it must always hit the network,
-  // otherwise a same-origin (PocketBase-served) deploy would serve stale data.
+  // Never cache backend API / admin traffic — always hit the network.
   if (sameOrigin && (url.pathname.startsWith("/api/") || url.pathname.startsWith("/_/") || url.pathname === "/scanping")) return;
 
-  // Cache-first for the app shell + big CDN deps (model/wasm/qr rarely change).
+  // Big cross-origin CDN deps (MediaPipe model/wasm) rarely change → cache-first.
+  if (runtimeCdn) {
+    e.respondWith(
+      caches.match(req).then((hit) =>
+        hit || fetch(req).then((res) => {
+          if (res && (res.ok || res.type === "opaque")) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); }
+          return res;
+        }).catch(() => hit)
+      )
+    );
+    return;
+  }
+
+  // The app's own files (HTML/JS/CSS/config/assets) → NETWORK-FIRST so a new deploy
+  // is seen immediately; fall back to cache only when offline. Keeps the cache warm.
   e.respondWith(
-    caches.match(req).then((hit) => {
-      if (hit) return hit;
-      return fetch(req).then((res) => {
-        if (res && (res.ok || res.type === "opaque")) {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});
-        }
-        return res;
-      }).catch(() => hit); // offline & uncached → fail gracefully
-    })
+    fetch(req).then((res) => {
+      if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); }
+      return res;
+    }).catch(() =>
+      caches.match(req).then((hit) => hit || (req.mode === "navigate" ? caches.match("index.html") : undefined))
+    )
   );
 });
