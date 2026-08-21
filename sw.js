@@ -1,5 +1,5 @@
 /* iColor Plus — service worker (offline kiosk cache) */
-const CACHE = "icolor-v3";
+const CACHE = "icolor-v4";
 const SHELL = [
   "./", "index.html", "app.js", "analytics.js", "backend.js", "config.default.js",
   "config.local.js", "commerce.js", "styles.css", "manifest.webmanifest", "assets/logo.svg",
@@ -10,8 +10,13 @@ const SHELL = [
 const RUNTIME_HOSTS = ["cdn.jsdelivr.net", "storage.googleapis.com"];
 
 self.addEventListener("install", (e) => {
+  // Precache fresh copies (bypass the HTTP cache) as the offline fallback.
   e.waitUntil(
-    caches.open(CACHE).then((c) => Promise.allSettled(SHELL.map((u) => c.add(u)))).then(() => self.skipWaiting())
+    caches.open(CACHE).then((c) =>
+      Promise.allSettled(SHELL.map((u) =>
+        fetch(u, { cache: "no-store" }).then((r) => (r && r.ok ? c.put(u, r.clone()) : null)).catch(() => {})
+      ))
+    ).then(() => self.skipWaiting())
   );
 });
 
@@ -44,10 +49,10 @@ self.addEventListener("fetch", (e) => {
     return;
   }
 
-  // The app's own files (HTML/JS/CSS/config/assets) → NETWORK-FIRST so a new deploy
-  // is seen immediately; fall back to cache only when offline. Keeps the cache warm.
+  // The app's own files → NETWORK-FIRST with cache:no-store so a new deploy is seen
+  // immediately (bypasses GitHub Pages' HTTP max-age). Falls back to cache offline.
   e.respondWith(
-    fetch(req).then((res) => {
+    fetch(req, { cache: "no-store" }).then((res) => {
       if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {}); }
       return res;
     }).catch(() =>
