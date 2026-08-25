@@ -2241,14 +2241,19 @@ function selectShade(shade) {
   if (!gridMode) popShadeLabel(shade);
   invalidate();
   if (shade.hex) trk("tryon", { sku: shade.id }); // count try-ons per SKU
+  _shopDismissed = false; // a new pick re-enables the product card
   renderShopCard(shade);
 }
 
 /* ---- "Shop the look" in-camera product card (paid feature) ---- */
+let _shopDismissed = false; // hidden via the card's × until the next shade pick
 function renderShopCard(shade) {
   const card = $("shopCard");
   if (!card) return;
-  const on = FEATURES.commerce && shade && shade.hex && shade.buyUrl;
+  // Never cover the swatches: only show when the colours dock is collapsed.
+  const dc = $("colorsToggle") && $("colorsToggle").closest(".dock-colors");
+  const colorsOpen = dc && !dc.classList.contains("collapsed");
+  const on = FEATURES.commerce && shade && shade.hex && shade.buyUrl && !_shopDismissed && !colorsOpen;
   if (!on || gridMode) { card.classList.add("hidden"); return; }
   const cm = CONFIG.commerce || {};
   const img = $("shopImg"), buy = $("shopBuy"), qr = $("shopQr"), badge = $("shopStock");
@@ -2334,6 +2339,7 @@ function setColorsCollapsed(collapsed) {
   const wrap = ct.closest(".dock-colors"); if (!wrap) return;
   wrap.classList.toggle("collapsed", collapsed);
   ct.setAttribute("aria-expanded", collapsed ? "false" : "true");
+  try { renderShopCard(selectedShade); } catch (e) {} // show/hide the product card with the colours
 }
 // Auto-collapse the colours shortly after a pick (debounced, so browsing stays open).
 function scheduleColorsCollapse() {
@@ -2360,8 +2366,15 @@ function scheduleColorsCollapse() {
       clearTimeout(_colorsCollapseTimer); // manual toggle cancels the auto-collapse
       const collapsed = wrap.classList.toggle("collapsed");
       ct.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      try { renderShopCard(selectedShade); } catch (e) {}
     });
   }
+  const sc = $("shopClose");
+  if (sc) sc.addEventListener("click", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    _shopDismissed = true;
+    const card = $("shopCard"); if (card) card.classList.add("hidden");
+  });
   const ot = $("optionsToggle");
   if (ot) {
     const wrap = ot.closest(".top-right");
