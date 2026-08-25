@@ -2327,6 +2327,30 @@ function stopCamGuide() {
   clearInterval(_camLightTimer); clearTimeout(_camGuideTimer);
 }
 
+/* ---- Fullscreen toggle + colours minimise (camera dock) ---- */
+{
+  const fsBtn = $("fullscreenBtn");
+  const target = $("appScreen");
+  if (fsBtn && target) {
+    fsBtn.addEventListener("click", () => {
+      if (document.fullscreenElement) { document.exitFullscreen && document.exitFullscreen(); }
+      else if (target.requestFullscreen) { target.requestFullscreen().catch(() => {}); }
+    });
+    document.addEventListener("fullscreenchange", () => {
+      fsBtn.classList.toggle("on", !!document.fullscreenElement);
+      fsBtn.setAttribute("aria-pressed", document.fullscreenElement ? "true" : "false");
+    });
+  }
+  const ct = $("colorsToggle");
+  if (ct) {
+    const wrap = ct.closest(".dock-colors");
+    ct.addEventListener("click", () => {
+      const collapsed = wrap.classList.toggle("collapsed");
+      ct.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    });
+  }
+}
+
 function popShadeLabel(shade) {
   shadeLabel.innerHTML = "";
   if (shade.hex) {
@@ -2522,6 +2546,23 @@ function triggerDownload(url, name) {
 function addCapture(cap) {
   captures.unshift(cap);
   updateGalleryThumb();
+  renderCamGallery();
+}
+
+// Bottom preview strip of recent captures (in the camera dock).
+function renderCamGallery() {
+  const strip = $("camGallery");
+  if (!strip) return;
+  if (!captures.length) { strip.classList.add("hidden"); strip.innerHTML = ""; return; }
+  strip.classList.remove("hidden");
+  strip.innerHTML = captures.slice(0, 12).map((c) =>
+    `<div class="cam-thumb" title="Open captures">` +
+    (c.type === "photo"
+      ? `<img src="${c.url}" alt="capture" />`
+      : `<video src="${c.url}" muted playsinline></video><span class="vb">🎬</span>`) +
+    `</div>`
+  ).join("");
+  strip.querySelectorAll(".cam-thumb").forEach((el) => el.addEventListener("click", openGallery));
 }
 
 function updateGalleryThumb() {
@@ -2561,6 +2602,7 @@ function openGallery() {
         URL.revokeObjectURL(cap.url);
         openGallery();
         updateGalleryThumb();
+        renderCamGallery();
         return;
       }
       triggerDownload(cap.url, cap.name);

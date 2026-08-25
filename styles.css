@@ -393,6 +393,36 @@ input[type="range"]::-moz-range-thumb {
 }
 .record.is-recording .record-core { width: 26px; height: 26px; border-radius: 7px; }
 
+/* ---------- Camera bottom dock (overlays the fullscreen camera) ---------- */
+#appScreen { position: relative; }
+.cam-dock {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 6;
+  padding: 6px 0 calc(8px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, rgba(0,0,0,0.78), rgba(0,0,0,0.35) 62%, transparent);
+  pointer-events: none; /* transparent areas pass taps to the camera */
+}
+.cam-dock > *, .cam-dock button, .cam-dock input, .cam-dock .swatch { pointer-events: auto; }
+/* recent-captures strip */
+.cam-gallery { display: flex; gap: 8px; overflow-x: auto; padding: 4px 16px 8px; max-width: 720px; margin: 0 auto; scrollbar-width: none; }
+.cam-gallery.hidden { display: none; }
+.cam-gallery::-webkit-scrollbar { display: none; }
+.cam-thumb { flex: 0 0 auto; width: 52px; height: 52px; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.4); background: #000; cursor: pointer; position: relative; }
+.cam-thumb img, .cam-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cam-thumb .vb { position: absolute; bottom: 1px; right: 3px; font-size: 11px; text-shadow: 0 1px 3px #000; }
+/* colours minimise toggle + collapsible body */
+.colors-toggle {
+  display: flex; align-items: center; gap: 8px; margin: 0 auto 4px; width: max-content;
+  background: rgba(0,0,0,0.5); border: 1px solid var(--ring); color: #fff; border-radius: 999px;
+  padding: 6px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; backdrop-filter: blur(6px);
+}
+.ct-dot { width: 10px; height: 10px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+.ct-chev { transition: transform 0.2s; font-size: 11px; opacity: 0.85; }
+.dock-colors.collapsed .ct-chev { transform: rotate(-90deg); }
+.dock-colors-body { max-height: 240px; overflow: hidden; transition: max-height 0.28s ease, opacity 0.2s; opacity: 1; }
+.dock-colors.collapsed .dock-colors-body { max-height: 0; opacity: 0; }
+.icon-btn.on { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border-color: transparent; }
+@media (prefers-reduced-motion: reduce) { .dock-colors-body, .ct-chev { transition: none; } }
+
 /* ---------- Gallery modal ---------- */
 .modal {
   position: fixed; inset: 0; z-index: 20; background: var(--bg);

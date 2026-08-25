@@ -130,6 +130,9 @@
         <button id="flipBtn" class="icon-btn" title="Switch camera" aria-label="Switch camera">
           <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm8-3h-2.6l-1.2-1.6A2 2 0 0 0 14.6 3H9.4a2 2 0 0 0-1.6.8L6.6 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2Zm-2.6 8.4-1.9-1.1a4.5 4.5 0 0 1-7 .1l1-1.7a2.7 2.7 0 0 0 4.2.1l-1.6-.9 3.7-.9.6 4.3ZM8.5 10.2 6.6 9.1l.6 4.3 3.7-.9-1.6-.9a2.7 2.7 0 0 1 4.2-.6l1-1.7a4.5 4.5 0 0 0-6-.6Z"/></svg>
         </button>
+        <button id="fullscreenBtn" class="icon-btn" title="Fullscreen" aria-label="Toggle fullscreen">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path fill="currentColor" d="M4 4h6v2H6v4H4V4Zm10 0h6v6h-2V6h-4V4ZM4 14h2v4h4v2H4v-6Zm14 0h2v6h-6v-2h4v-4Z"/></svg>
+        </button>
       </div>
     </div>
 
@@ -158,17 +161,27 @@
     <div id="flash" class="flash"></div>
   </div>
 
-  <!-- Intensity control -->
-  <div class="intensity-row">
-    <span class="intensity-icon" aria-hidden="true">◑</span>
-    <input id="intensity" type="range" min="0" max="100" value="85" aria-label="Color intensity" />
-    <span id="intensityVal" class="intensity-val">85%</span>
-  </div>
+  <!-- Bottom dock — overlays the fullscreen camera -->
+  <div class="cam-dock" id="camDock">
+    <!-- Recent captures strip -->
+    <div id="camGallery" class="cam-gallery hidden" aria-label="Recent captures"></div>
 
-  <!-- Color / product picker -->
-  <div class="swatches-wrap">
-    <div id="swatches" class="swatches" role="listbox" aria-label="iColor Plus shades"></div>
-  </div>
+    <!-- Colors + intensity (collapsible to reveal the full camera) -->
+    <div class="dock-colors">
+      <button id="colorsToggle" class="colors-toggle" aria-expanded="true" aria-controls="dockColorsBody">
+        <span class="ct-dot" aria-hidden="true"></span><span>Colours &amp; intensity</span><span class="ct-chev" aria-hidden="true">▾</span>
+      </button>
+      <div class="dock-colors-body" id="dockColorsBody">
+        <div class="intensity-row">
+          <span class="intensity-icon" aria-hidden="true">◑</span>
+          <input id="intensity" type="range" min="0" max="100" value="85" aria-label="Color intensity" />
+          <span id="intensityVal" class="intensity-val">85%</span>
+        </div>
+        <div class="swatches-wrap">
+          <div id="swatches" class="swatches" role="listbox" aria-label="iColor Plus shades"></div>
+        </div>
+      </div>
+    </div>
 
   <!-- Capture controls -->
   <div class="controls">
@@ -191,6 +204,7 @@
       <span class="ctrl-txt">Gallery</span>
     </button>
   </div>
+  </div><!-- /cam-dock -->
 </main>
 
 <!-- ===== Gallery modal ===== -->
