@@ -236,9 +236,19 @@ textarea:focus-visible, [tabindex]:focus-visible, [role="button"]:focus-visible 
   padding: 14px 14px; padding-top: calc(14px + env(safe-area-inset-top, 0px));
   background: linear-gradient(to bottom, rgba(0,0,0,0.5), transparent);
 }
-.top-actions { display: flex; gap: 8px; overflow-x: auto; max-width: calc(100% - 96px); scrollbar-width: none; }
+.top-right { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.top-actions { display: flex; gap: 8px; overflow-x: auto; max-width: calc(100vw - 130px); scrollbar-width: none; transition: max-width 0.28s ease, opacity 0.2s; }
 .top-actions::-webkit-scrollbar { display: none; }
 .top-actions .icon-btn { flex: 0 0 auto; }
+.top-right.collapsed .top-actions { max-width: 0; min-width: 0; width: 0; opacity: 0; pointer-events: none; overflow: hidden; }
+.opt-toggle {
+  flex: 0 0 auto; width: 38px; height: 38px; border-radius: 50%; border: 1px solid var(--ring);
+  background: rgba(0,0,0,0.4); color: #fff; display: grid; place-items: center; cursor: pointer; backdrop-filter: blur(6px);
+}
+.opt-toggle:active { background: rgba(0,0,0,0.6); }
+.opt-toggle svg { transition: transform 0.2s; }
+.top-right.collapsed .opt-toggle svg { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .top-actions, .opt-toggle svg { transition: none; } }
 .icon-btn.accent {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   border-color: transparent; box-shadow: 0 4px 14px rgba(95, 125, 46, 0.5);

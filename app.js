@@ -2224,7 +2224,7 @@ function buildSwatches() {
     name.className = "name";
     name.textContent = shade.name;
     btn.append(chip, name);
-    btn.addEventListener("click", () => selectShade(shade));
+    btn.addEventListener("click", () => { selectShade(shade); scheduleColorsCollapse(); });
     btn._shadeId = shade.id;
     swatchesEl.appendChild(btn);
   });
@@ -2327,7 +2327,19 @@ function stopCamGuide() {
   clearInterval(_camLightTimer); clearTimeout(_camGuideTimer);
 }
 
-/* ---- Fullscreen toggle + colours minimise (camera dock) ---- */
+/* ---- Camera dock: fullscreen, colours minimise (auto after pick), options bar ---- */
+let _colorsCollapseTimer = null;
+function setColorsCollapsed(collapsed) {
+  const ct = $("colorsToggle"); if (!ct) return;
+  const wrap = ct.closest(".dock-colors"); if (!wrap) return;
+  wrap.classList.toggle("collapsed", collapsed);
+  ct.setAttribute("aria-expanded", collapsed ? "false" : "true");
+}
+// Auto-collapse the colours shortly after a pick (debounced, so browsing stays open).
+function scheduleColorsCollapse() {
+  clearTimeout(_colorsCollapseTimer);
+  _colorsCollapseTimer = setTimeout(() => setColorsCollapsed(true), 1200);
+}
 {
   const fsBtn = $("fullscreenBtn");
   const target = $("appScreen");
@@ -2345,8 +2357,18 @@ function stopCamGuide() {
   if (ct) {
     const wrap = ct.closest(".dock-colors");
     ct.addEventListener("click", () => {
+      clearTimeout(_colorsCollapseTimer); // manual toggle cancels the auto-collapse
       const collapsed = wrap.classList.toggle("collapsed");
       ct.setAttribute("aria-expanded", collapsed ? "false" : "true");
+    });
+  }
+  const ot = $("optionsToggle");
+  if (ot) {
+    const wrap = ot.closest(".top-right");
+    ot.addEventListener("click", () => {
+      const collapsed = wrap.classList.toggle("collapsed");
+      ot.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      ot.title = collapsed ? "Show options" : "Hide options";
     });
   }
 }
