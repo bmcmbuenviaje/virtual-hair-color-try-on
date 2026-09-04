@@ -14,7 +14,7 @@ window.ICOLOR_DEFAULT_CONFIG = {
 
   // Build/version tag — reported per kiosk to the fleet view so you can spot
   // devices running an old build. Bump when you ship an update.
-  build: "2026.08.14",
+  build: "2026.09.05",
 
   // Soft gate for the admin console. Passwords are stored as salted SHA-256 hashes
   // (not plaintext) so this file no longer leaks credentials via "View Source".
@@ -68,6 +68,7 @@ window.ICOLOR_DEFAULT_CONFIG = {
     attract: false,    // kiosk attract / idle camera-mirror teaser
     commerce: true,    // "shop the look" ecommerce product card (PAID add-on)
     camguide: true,    // camera fit guidance (positioning oval + low-light hint)
+    handoff: false,    // "send to my phone" — offline transfer of captures to a guest's phone via an on-site box
   },
 
   // Shade-of-the-week promo banner (Super Admin sets; shows on the start screen).
@@ -162,6 +163,20 @@ window.ICOLOR_DEFAULT_CONFIG = {
   //   checkout: "product" (open the product page) | "cart" (Shopify add-to-cart)
   //     | "discount" (Shopify add-to-cart with the session coupon/voucher applied).
   commerce: { currency: "₱", buttonLabel: "Add to Cart", showQr: true, checkout: "product" },
+
+  // "Send to my phone" — OFFLINE media handoff (gated by features.handoff). Lets a
+  // guest pull their try-on photos/videos onto their own phone with NO internet, via
+  // a small on-site box. See handoff-box/SETUP.md for the two deployment tiers:
+  //   Tier 2 (tablets / Android-TV kiosks): a GL.iNet router runs the box; the guest
+  //     joins its Wi-Fi and scans a QR. Set url to the box's trusted HTTPS name.
+  //   Tier 0 (Windows mini-PC kiosk): the PC self-hosts the box on loopback; guests
+  //     join the PC's Mobile Hotspot. Set url to http://localhost:8787 .
+  //   url       — box base URL. Tier 2: "https://<name>.duckdns.org". Tier 0:
+  //               "http://localhost:8787". Blank = feature off even if toggled on.
+  //   wifiSsid / wifiPass — the box's Wi-Fi; shown to the guest and encoded as a
+  //               scan-to-join QR so they don't type a password. Blank = no join QR.
+  //   label     — the guest-facing button text.
+  handoff: { url: "", wifiSsid: "", wifiPass: "", label: "Send to my phone" },
 
   // Language. codes: "en" | "tl".
   lang: { default: "en", enabled: ["en", "tl"] },

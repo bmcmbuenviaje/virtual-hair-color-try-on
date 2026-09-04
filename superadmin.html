@@ -161,6 +161,17 @@
       <div class="field"><label>Scan-ping URL (Funnel, optional)</label><input id="qrScanPing" type="text" placeholder="https://…ts.net:8443/scanping" /></div>
     </div>
 
+    <div class="a-card" id="sa-card-handoff">
+      <h2>Send to my phone <span class="muted">— offline photo handoff</span></h2>
+      <p class="hint" style="color:var(--muted);font-size:12.5px;margin:-4px 0 12px">Lets a guest pull their try-on photos/videos onto their own phone with <b>no internet</b>, via a small on-site box. Enable the <b>“Send to my phone”</b> feature above, then point this at the box. See <b>handoff-box/SETUP.md</b>. <br>Tier&nbsp;2 (tablets / Android-TV): a GL.iNet router — URL like <code>https://name.duckdns.org</code>. Tier&nbsp;0 (Windows mini-PC self-host): <code>http://localhost:8787</code>.</p>
+      <div class="field" style="margin-bottom:10px"><label>Box URL</label><input id="hoUrl" type="text" placeholder="https://icolorkiosk.duckdns.org  (or http://localhost:8787)" /></div>
+      <div class="row" style="gap:14px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="flex:1;min-width:180px"><label>Box Wi-Fi name (SSID)</label><input id="hoSsid" type="text" placeholder="iColor-Kiosk" /></div>
+        <div class="field" style="flex:1;min-width:180px"><label>Box Wi-Fi password</label><input id="hoPass" type="text" placeholder="(blank = open network / no join QR)" /></div>
+        <div class="field" style="min-width:160px"><label>Button label</label><input id="hoLabel" type="text" placeholder="Send to my phone" /></div>
+      </div>
+    </div>
+
     <div class="a-card">
       <h2>Live backend <span class="muted">— real-time sync &amp; fleet</span></h2>
       <p class="hint" style="color:var(--muted);font-size:12.5px;margin:-4px 0 12px">Optional. Self-hosted PocketBase (see POCKETBASE.md). When set, devices mirror their data + leads to the cloud; you consolidate live and push config to the fleet.</p>

@@ -55,6 +55,7 @@
       ["cards", "Save / share cards", "Social-ready result cards"],
       ["print", "Print (A5)", "Printed analysis report"],
       ["qr", "QR to phone", "Continue on the customer's phone"],
+      ["handoff", "Send to my phone", "Offline photo/video handoff via an on-site box"],
     ] },
     { title: "Marketing & commerce", items: [
       ["promo", "Promo banner", "Shade of the week"],
@@ -71,7 +72,7 @@
     basic: { label: "Basic", maxShades: 5, on: ["photo", "qr", "offline"] },
     standard: { label: "Standard", maxShades: null, on: ["photo", "video", "upload", "split", "grid", "brighten", "cards", "qr", "promo", "multilang", "offline"] },
     pro: { label: "Pro", maxShades: null, on: ["photo", "video", "upload", "split", "grid", "brighten", "analysis", "statement", "vibe", "ratePicks", "cards", "qr", "promo", "getlook", "heatmap", "multilang", "offline"] },
-    allin: { label: "All-in", maxShades: null, on: ALLF.filter((k) => k !== "watermark" && k !== "attract" && k !== "commerce") },
+    allin: { label: "All-in", maxShades: null, on: ALLF.filter((k) => k !== "watermark" && k !== "attract" && k !== "commerce" && k !== "handoff") },
   };
 
   function resolved() { return A.resolvedConfig(); }
@@ -94,6 +95,7 @@
     cfg.attract = Object.assign({ idleMs: 45000, shadeId: "", cta: "Tap to try your color", usePromo: false }, cfg.attract || {});
     cfg.qr = Object.assign({ baseUrl: "", scanPingUrl: "", includeShade: true }, cfg.qr || {});
     cfg.commerce = Object.assign({ currency: "₱", buttonLabel: "Add to Cart", showQr: true, checkout: "product" }, cfg.commerce || {});
+    cfg.handoff = Object.assign({ url: "", wifiSsid: "", wifiPass: "", label: "Send to my phone" }, cfg.handoff || {});
     cfg.privacy = Object.assign({ policyUrl: "", noticeText: "", retentionDays: 365 }, cfg.privacy || {});
     cfg.backend = Object.assign({ provider: "none", url: "" }, cfg.backend || {});
     return cfg;
@@ -270,6 +272,12 @@
       $("qrBaseUrl").value = cfg.qr.baseUrl || "";
       $("qrScanPing").value = cfg.qr.scanPingUrl || "";
     }
+    if ($("hoUrl")) {
+      $("hoUrl").value = cfg.handoff.url || "";
+      $("hoSsid").value = cfg.handoff.wifiSsid || "";
+      $("hoPass").value = cfg.handoff.wifiPass || "";
+      $("hoLabel").value = cfg.handoff.label || "";
+    }
     if ($("pvPolicy")) {
       $("pvPolicy").value = cfg.privacy.policyUrl || "";
       $("pvRetention").value = cfg.privacy.retentionDays != null ? cfg.privacy.retentionDays : 365;
@@ -315,6 +323,10 @@
     on("attractUsePromo", "change", (e) => (cfg.attract.usePromo = e.target.checked));
     on("qrBaseUrl", "input", (e) => (cfg.qr.baseUrl = e.target.value.trim()));
     on("qrScanPing", "input", (e) => (cfg.qr.scanPingUrl = e.target.value.trim()));
+    on("hoUrl", "input", (e) => (cfg.handoff.url = e.target.value.trim()));
+    on("hoSsid", "input", (e) => (cfg.handoff.wifiSsid = e.target.value));
+    on("hoPass", "input", (e) => (cfg.handoff.wifiPass = e.target.value));
+    on("hoLabel", "input", (e) => (cfg.handoff.label = e.target.value));
     on("pvPolicy", "input", (e) => (cfg.privacy.policyUrl = e.target.value.trim()));
     on("pvNotice", "input", (e) => (cfg.privacy.noticeText = e.target.value));
     on("pvRetention", "input", (e) => (cfg.privacy.retentionDays = parseInt(e.target.value, 10) || 0));

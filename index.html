@@ -217,13 +217,30 @@
 <div id="galleryModal" class="modal hidden">
   <div class="modal-head">
     <h2>Your Captures</h2>
-    <button id="closeGallery" class="icon-btn" aria-label="Close">
+    <div class="modal-head-actions">
+      <button id="sendPhotosBtn" class="pill-btn hidden" title="Send these to your phone">
+        <svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><path fill="currentColor" d="M17 1H7a2 2 0 0 0-2 2v18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2Zm0 18H7V5h10v14Zm-5 3.2a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4Z"/></svg>
+        Send to my phone
+      </button>
+      <button id="closeGallery" class="icon-btn" aria-label="Close">
+        <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="m12 10.6 5-5 1.4 1.4-5 5 5 5L17 18.4l-5-5-5 5L5.6 17l5-5-5-5L7 5.6l5 5Z"/></svg>
+      </button>
+    </div>
+  </div>
+  <p class="modal-hint">Tap any item to download it to this device — or “Send to my phone”.</p>
+  <div id="galleryGrid" class="gallery-grid"></div>
+  <div id="galleryEmpty" class="gallery-empty">No captures yet. Take a photo or record a clip!</div>
+</div>
+
+<!-- ===== Send-to-phone (offline handoff) modal ===== -->
+<div id="handoffModal" class="modal hidden">
+  <div class="modal-head">
+    <h2>Get your photos</h2>
+    <button id="closeHandoff" class="icon-btn" aria-label="Close">
       <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="m12 10.6 5-5 1.4 1.4-5 5 5 5L17 18.4l-5-5-5 5L5.6 17l5-5-5-5L7 5.6l5 5Z"/></svg>
     </button>
   </div>
-  <p class="modal-hint">Tap any item to download it to your device.</p>
-  <div id="galleryGrid" class="gallery-grid"></div>
-  <div id="galleryEmpty" class="gallery-empty">No captures yet. Take a photo or record a clip!</div>
+  <div id="handoffBody" class="handoff-body"></div>
 </div>
 
 <!-- ===== Analysis modal ===== -->

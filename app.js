@@ -2611,6 +2611,8 @@ function updateGalleryThumb() {
 function openGallery() {
   galleryGrid.innerHTML = "";
   galleryEmpty.style.display = captures.length ? "none" : "block";
+  const sp = $("sendPhotosBtn");
+  if (sp) sp.classList.toggle("hidden", !(handoffEnabled() && captures.length));
   captures.forEach((cap, idx) => {
     const item = document.createElement("div");
     item.className = "gallery-item";
@@ -2665,6 +2667,103 @@ function showToast(msg) {
 }
 
 /* ============================================================
+   Send-to-phone — OFFLINE media handoff (Tier 0 mini-PC / Tier 2 box)
+   ------------------------------------------------------------
+   Uploads this session's captures to an on-site box (a GL.iNet router on its own
+   Wi-Fi, or the mini-PC on loopback) and shows the guest a QR to a LOCAL gallery
+   page they open on their own phone. Needs NO internet at the venue.
+   See handoff-box/SETUP.md.
+   ============================================================ */
+function handoffCfg() { return CONFIG.handoff || {}; }
+function handoffEnabled() { return !!(FEATURES.handoff && (handoffCfg().url || "").trim()); }
+function handoffBase() { return (handoffCfg().url || "").trim().replace(/\/+$/, ""); }
+
+// WIFI: QR payload so the guest joins the box Wi-Fi without typing a password.
+function wifiJoinPayload() {
+  const h = handoffCfg();
+  const ssid = (h.wifiSsid || "").trim();
+  if (!ssid) return "";
+  const esc = (s) => String(s).replace(/([\\;,":])/g, "\\$1");
+  const pass = (h.wifiPass || "").trim();
+  return "WIFI:T:" + (pass ? "WPA" : "nopass") + ";S:" + esc(ssid) + ";" + (pass ? "P:" + esc(pass) + ";" : "") + ";";
+}
+
+function qrSvg(str, cell) {
+  if (!window.qrcode || !str) return "";
+  try { const q = window.qrcode(0, "M"); q.addData(str); q.make(); return q.createSvgTag({ cellSize: cell || 4, margin: 1, scalable: true }); }
+  catch (e) { return ""; }
+}
+
+function openHandoffModal() { const m = $("handoffModal"); if (m) m.classList.remove("hidden"); }
+function closeHandoffModal() { const m = $("handoffModal"); if (m) m.classList.add("hidden"); }
+
+function renderHandoffState(state, data) {
+  const body = $("handoffBody");
+  if (!body) return;
+  data = data || {};
+  if (state === "uploading") {
+    body.innerHTML = '<div class="handoff-loading"><div class="handoff-spinner" aria-hidden="true"></div><p>Preparing your photos…</p></div>';
+    return;
+  }
+  if (state === "error") {
+    body.innerHTML =
+      '<div class="handoff-error"><p class="he-title">Couldn’t reach the photo box.</p>' +
+      '<p class="muted">Make sure this display is connected to the on-site Wi-Fi box, then try again.</p>' +
+      '<button id="handoffRetry" class="pill-btn">Try again</button></div>';
+    const r = $("handoffRetry"); if (r) r.onclick = sendToPhone;
+    return;
+  }
+  // state === "ready"
+  const wifi = wifiJoinPayload();
+  const wifiBlock = wifi
+    ? '<div class="handoff-step"><div class="hs-num">1</div><div class="hs-txt"><b>Join the Wi-Fi</b>' +
+        '<span class="muted">Scan to connect — no password to type</span></div>' +
+        '<div class="hs-qr">' + qrSvg(wifi, 4) + '</div></div>'
+    : '';
+  const stepN = wifi ? "2" : "1";
+  body.innerHTML =
+    '<p class="handoff-lead">Grab your photos on your phone 📱</p>' +
+    wifiBlock +
+    '<div class="handoff-step"><div class="hs-num">' + stepN + '</div><div class="hs-txt"><b>Scan for your photos</b>' +
+      '<span class="muted">Opens a page with Save buttons</span>' +
+      (data.code ? '<span class="handoff-code">Code: ' + esc(data.code) + '</span>' : '') +
+    '</div><div class="hs-qr">' + qrSvg(data.url, 5) + '</div></div>' +
+    '<p class="handoff-foot muted">Your photos live only on the on-site box and are auto-deleted at end of day.</p>';
+}
+
+async function sendToPhone() {
+  if (!handoffEnabled()) { showToast("Photo transfer isn’t set up here."); return; }
+  if (!captures.length) { showToast("Take a photo or clip first."); return; }
+  const base = handoffBase();
+  openHandoffModal();
+  renderHandoffState("uploading");
+  const fd = new FormData();
+  try {
+    const loc = window.Analytics && window.Analytics.currentLocation();
+    if (loc) { fd.append("loc", loc.id || ""); fd.append("locn", loc.name || ""); }
+  } catch (e) {}
+  // Oldest-first so the gallery reads in capture order.
+  captures.slice().reverse().forEach((c, i) => {
+    const ext = c.type === "video" ? "webm" : "jpg";
+    fd.append("files", c.blob, c.name || ("icolor-" + (i + 1) + "." + ext));
+  });
+  try {
+    const res = await fetch(base + "/handoff", { method: "POST", body: fd });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    const url = (data && (data.url || (data.code ? base + "/g/" + data.code : ""))) || "";
+    if (!url) throw new Error("no url");
+    renderHandoffState("ready", { url: url, code: (data && data.code) || "" });
+    try { trk("handoff"); } catch (e) {}
+  } catch (err) {
+    renderHandoffState("error");
+  }
+}
+
+// Small HTML-escape used by the handoff renderer.
+function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+/* ============================================================
    Wiring
    ============================================================ */
 photoBtn.addEventListener("click", takePhoto);
@@ -2672,6 +2771,8 @@ galleryBtn.addEventListener("click", openGallery);
 $("closeGallery").addEventListener("click", () =>
   galleryModal.classList.add("hidden")
 );
+$("sendPhotosBtn").addEventListener("click", sendToPhone);
+$("closeHandoff").addEventListener("click", closeHandoffModal);
 analysisBtn.addEventListener("click", () => openAnalysis(false));
 $("closeAnalysis").addEventListener("click", () =>
   analysisModal.classList.add("hidden")

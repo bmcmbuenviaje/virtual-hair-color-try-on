@@ -715,3 +715,34 @@ label.inline, .inline { color: var(--muted); font-size: 13.5px; }
 .save-bar { position: sticky; bottom: 0; margin-top: 22px; background: rgba(13,15,10,0.94); backdrop-filter: blur(8px);
   border-top: 1px solid var(--ring); padding: 14px 0; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; z-index: 5; }
 @media (max-width: 560px) { .feat-grid { grid-template-columns: 1fr; } .a-card { padding: 16px; } }
+
+/* ============================================================
+   Send-to-phone (offline handoff) modal
+   ============================================================ */
+.handoff-body { padding: 6px 20px 22px; max-width: 460px; margin: 0 auto; width: 100%; }
+.handoff-lead { text-align: center; font-size: 18px; font-weight: 700; margin: 6px 0 18px; }
+.handoff-foot { text-align: center; font-size: 12px; margin-top: 16px; }
+.handoff-step { display: flex; align-items: center; gap: 14px; padding: 14px; margin-bottom: 12px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--ring); border-radius: 16px; }
+.handoff-step .hs-num { flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff;
+  display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px; }
+.handoff-step .hs-txt { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.handoff-step .hs-txt b { font-size: 15px; }
+.handoff-step .hs-txt .muted { font-size: 12.5px; }
+.handoff-step .hs-qr { flex: 0 0 auto; width: 104px; height: 104px; background: #fff; border-radius: 12px;
+  padding: 7px; display: flex; align-items: center; justify-content: center; }
+.handoff-step .hs-qr svg { width: 100%; height: 100%; display: block; }
+.handoff-code { margin-top: 4px; font-weight: 700; letter-spacing: 1px; color: var(--accent-2);
+  font-variant-numeric: tabular-nums; }
+.handoff-loading { text-align: center; padding: 40px 10px; }
+.handoff-spinner { width: 42px; height: 42px; margin: 0 auto 16px; border-radius: 50%;
+  border: 4px solid var(--ring); border-top-color: var(--accent-2); animation: handoff-spin 0.8s linear infinite; }
+@keyframes handoff-spin { to { transform: rotate(360deg); } }
+.handoff-error { text-align: center; padding: 26px 10px; }
+.handoff-error .he-title { font-weight: 700; font-size: 16px; margin-bottom: 6px; }
+.handoff-error .pill-btn { margin-top: 16px; }
+@media (max-width: 420px) {
+  .handoff-step { gap: 10px; padding: 12px; }
+  .handoff-step .hs-qr { width: 88px; height: 88px; }
+}

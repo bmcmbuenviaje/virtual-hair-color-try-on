@@ -1,0 +1,6 @@
+# The handoff box runs on OpenWrt / Linux — these MUST stay LF or they break
+# (a CRLF in the shebang makes the init script's interpreter invalid).
+handoff-box/openwrt/* text eol=lf
+handoff-box/*.go text eol=lf
+handoff-box/go.mod text eol=lf
+*.sh text eol=lf
