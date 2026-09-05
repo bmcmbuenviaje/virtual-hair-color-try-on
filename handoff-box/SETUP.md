@@ -24,8 +24,18 @@ There are two deployment tiers. Pick per site by kiosk type:
 ## Tier 2 — GL.iNet Beryl (tablets & Android-TV kiosks)
 
 ### Parts (per site)
-- **GL.iNet GL-MT1300 "Beryl"** router (available on Lazada/Shopee PH).
-- A **microSD card** (8–32 GB is plenty) for photo storage.
+- A **GL.iNet router** running its OpenWrt firmware. Any of these work — pick by
+  price/availability. Note the **CPU**, it decides which binary you run:
+
+  | Model | Wi-Fi | CPU / binary | Storage on it |
+  |-------|-------|--------------|----------------|
+  | GL-MT1300 **Beryl** | AC | MIPS → `mipsle` | microSD slot |
+  | GL-MT300N-V2 **Mango** (budget) | N | MIPS → `mipsle` | USB only (16 MB flash — cramped) |
+  | GL-MT3000 **Beryl AX** | **Wi-Fi 6** | **ARM64** → `arm64` | **USB only** (no microSD) |
+  | GL-AXT1800 **Slate AX** | **Wi-Fi 6** | **ARM64** → `arm64` | **microSD + USB 3.0** |
+
+- **Storage:** a **microSD** card (8–32 GB) if the model has a slot, otherwise a
+  small **USB flash drive**. Only a few photos live on it at a time.
 - A free **DuckDNS** subdomain (below). One domain can serve every site.
 
 ### A. Get a free DuckDNS name + token
@@ -44,14 +54,15 @@ There are two deployment tiers. Pick per site by kiosk type:
    SSID **`iColor-Kiosk`**, password **`greatlengths`**. Note them for the kiosk config.
 4. Note the LAN IP — default **`192.168.8.1`**.
 
-### C. Enable microSD storage
-Insert the microSD. In the GL.iNet admin the card mounts automatically; via SSH
-check the path:
+### C. Enable storage (microSD or USB)
+Insert the microSD **or** plug in a USB flash drive (Beryl AX has no card slot —
+use USB). GL.iNet mounts it automatically; via SSH check the path:
 ```
 ssh root@192.168.8.1
-ls /mnt          # usually /mnt/mmcblk0p1 (microSD) or /mnt/sda1 (USB)
+ls /mnt          # microSD → /mnt/mmcblk0p1   ·   USB stick → /mnt/sda1
 ```
-Use that path as `STORAGE` below (the examples assume `/mnt/mmcblk0p1`).
+Use that path as `STORAGE` below. Examples assume `/mnt/mmcblk0p1`; on the
+**Beryl AX (USB)** it's typically `/mnt/sda1` — set it in the init script.
 
 ### D. Issue the Let's Encrypt certificate (via DuckDNS DNS-challenge)
 Still over SSH, with internet attached:
@@ -87,13 +98,17 @@ uci commit dhcp
 ```
 
 ### F. Install the handoff server + autostart
-1. **Build the binary** for the Beryl (MediaTek MT7621 = `mipsle`). On any PC with
+1. **Build the binary for your model's CPU** (see the parts table). On any PC with
    [Go](https://go.dev/dl/) installed, from the `handoff-box/` folder:
    ```sh
+   # ARM64 models — Beryl AX (GL-MT3000), Slate AX (GL-AXT1800):
+   GOOS=linux GOARCH=arm64 go build -trimpath -ldflags "-s -w" -o icolor-handoff .
+
+   # MIPS models — Beryl (GL-MT1300), Mango (GL-MT300N-V2):
    GOOS=linux GOARCH=mipsle GOMIPS=softfloat go build -trimpath -ldflags "-s -w" -o icolor-handoff .
    ```
-   (Binaries aren't committed to keep the repo light. The `mipsle` build for the
-   Beryl is ~8 MB and statically linked — no runtime to install on the router.)
+   (Binaries aren't committed to keep the repo light. Each build is ~7–8 MB and
+   statically linked — no runtime to install on the router.)
 2. **Copy** the binary to the microSD and the init script into place:
    ```sh
    scp icolor-handoff root@192.168.8.1:/mnt/mmcblk0p1/
