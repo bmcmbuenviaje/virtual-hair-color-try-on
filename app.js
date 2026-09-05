@@ -2109,6 +2109,9 @@ async function shareReportCard() {
   cv.toBlob(async (blob) => {
     if (!blob) return;
     const name = `icolorplus-analysis-${timestamp()}.jpg`;
+    // Always keep the card in the gallery so it's available to "Send to my phone".
+    const url = URL.createObjectURL(blob);
+    addCapture({ type: "photo", url, blob, name });
     const file = new File([blob], name, { type: "image/jpeg" });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try {
@@ -2121,10 +2124,8 @@ async function shareReportCard() {
         /* user dismissed the share sheet */
       }
     } else {
-      const url = URL.createObjectURL(blob);
-      addCapture({ type: "photo", url, blob, name });
       triggerDownload(url, name);
-      showToast("Sharing not supported here — saved the image instead");
+      showToast("Sharing not supported here — saved to your gallery");
     }
   }, "image/jpeg", 0.92);
 }
@@ -2760,6 +2761,24 @@ async function sendToPhone() {
   }
 }
 
+// Build the analysis / social card, drop it into the gallery, and hand it to the
+// guest's phone in one tap (from the analysis modal).
+async function sendAnalysisToPhone() {
+  if (!handoffEnabled()) { showToast("Photo transfer isn’t set up here."); return; }
+  const a = lastAnalysis || analyzeCurrent();
+  if (!a) { showToast("Analyze your hair first"); return; }
+  showToast("Building your card…");
+  const cv = await buildReportCard(a, cardFormat);
+  await new Promise((res) => cv.toBlob((blob) => {
+    if (blob) {
+      const url = URL.createObjectURL(blob);
+      addCapture({ type: "photo", url, blob, name: `icolorplus-analysis-${timestamp()}.jpg` });
+    }
+    res();
+  }, "image/jpeg", 0.92));
+  sendToPhone();
+}
+
 // Small HTML-escape used by the handoff renderer.
 function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
@@ -2773,6 +2792,9 @@ $("closeGallery").addEventListener("click", () =>
 );
 $("sendPhotosBtn").addEventListener("click", sendToPhone);
 $("closeHandoff").addEventListener("click", closeHandoffModal);
+$("sendAnalysisPhone").addEventListener("click", sendAnalysisToPhone);
+// Reveal the analysis-modal "To phone" button only when handoff is configured.
+if (handoffEnabled()) $("sendAnalysisPhone").classList.remove("hidden");
 analysisBtn.addEventListener("click", () => openAnalysis(false));
 $("closeAnalysis").addEventListener("click", () =>
   analysisModal.classList.add("hidden")
