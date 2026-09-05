@@ -58,6 +58,15 @@ const I18N = {
     lead: "See iColor Plus shades on your own hair in real time. Pick a colour, then capture a photo or a 30-second video — everything is saved straight to your device. Nothing is uploaded.",
     theLook: "The look", detectedColour: "Detected hair colour", closest: "Closest iColor Plus", topMatches: "Top matches", bestMatch: "Best match", tryIt: "Try it",
     pickImage: "Please choose an image file", analyzingLook: "Analyzing the look…", noHairLook: "Couldn't read hair in that photo — try a clearer one", lookFailed: "Couldn't analyze that photo",
+    ho_title: "Get your photos", ho_lead: "Grab your photos on your phone 📱",
+    ho_join: "Join the Wi-Fi", ho_join_sub: "Scan to connect — no password to type",
+    ho_scan: "Scan for your photos", ho_scan_sub: "Opens a page with Save buttons",
+    ho_code: "Code", ho_foot: "Your photos live only on the on-site box and are auto-deleted at end of day.",
+    ho_prep: "Preparing your photos…", ho_err_title: "Couldn’t reach the photo box.",
+    ho_err_sub: "Make sure this display is connected to the on-site Wi-Fi box, then try again.",
+    ho_retry: "Try again", ho_send: "Send to my phone", ho_tophone: "To phone",
+    ho_not_setup: "Photo transfer isn’t set up here.", ho_take_first: "Take a photo or clip first.",
+    ho_nudge: "📱 Tap “Send to my phone” to take your photos home.",
     langName: "EN",
   },
   tl: {
@@ -67,6 +76,15 @@ const I18N = {
     lead: "Tingnan ang mga iColor Plus shade sa sarili mong buhok nang live. Pumili ng kulay, tapos kumuha ng larawan o 30-segundong video — direktang naka-save sa iyong device. Walang ina-upload.",
     theLook: "Ang hitsura", detectedColour: "Natukoy na kulay ng buhok", closest: "Pinakamalapit na iColor Plus", topMatches: "Nangungunang tugma", bestMatch: "Pinakamatugma", tryIt: "Subukan",
     pickImage: "Pumili ng larawan", analyzingLook: "Ina-analyze ang hitsura…", noHairLook: "Hindi mabasa ang buhok sa larawan — subukan ang mas malinaw", lookFailed: "Hindi ma-analyze ang larawan",
+    ho_title: "Kunin ang iyong mga larawan", ho_lead: "Kunin ang mga larawan sa iyong telepono 📱",
+    ho_join: "Kumonekta sa Wi-Fi", ho_join_sub: "I-scan para kumonekta — walang ita-type na password",
+    ho_scan: "I-scan para sa mga larawan", ho_scan_sub: "May mga Save button ang bubukas na pahina",
+    ho_code: "Code", ho_foot: "Ang mga larawan ay nasa on-site box lang at awtomatikong buburahin sa katapusan ng araw.",
+    ho_prep: "Inihahanda ang iyong mga larawan…", ho_err_title: "Hindi maabot ang photo box.",
+    ho_err_sub: "Siguraduhing nakakonekta ang display sa on-site Wi-Fi box, tapos subukan muli.",
+    ho_retry: "Subukan muli", ho_send: "Ipadala sa telepono ko", ho_tophone: "Sa telepono",
+    ho_not_setup: "Hindi naka-setup ang paglipat ng larawan dito.", ho_take_first: "Kumuha muna ng larawan o video.",
+    ho_nudge: "📱 I-tap ang “Ipadala sa telepono ko” para maiuwi ang mga larawan.",
     langName: "TL",
   },
 };
@@ -203,6 +221,7 @@ let gridLayout = { cols: 0, rows: 0, cw: 0, ch: 0 };
 
 // Media captures
 const captures = []; // { type, url, blob, name }
+const triedShades = []; // shade ids tried this session (order preserved) — powers "shop the look" on the handoff page
 
 // Usage analytics (no-op if analytics.js isn't present)
 let sessionStartTs = null;
@@ -2241,7 +2260,10 @@ function selectShade(shade) {
   s?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
   if (!gridMode) popShadeLabel(shade);
   invalidate();
-  if (shade.hex) trk("tryon", { sku: shade.id }); // count try-ons per SKU
+  if (shade.hex) {
+    trk("tryon", { sku: shade.id }); // count try-ons per SKU
+    if (!triedShades.includes(shade.id)) triedShades.push(shade.id); // for "shop the look" on the handoff page
+  }
   _shopDismissed = false; // a new pick re-enables the product card
   renderShopCard(shade);
 }
@@ -2583,6 +2605,16 @@ function addCapture(cap) {
   captures.unshift(cap);
   updateGalleryThumb();
   renderCamGallery();
+  maybeHandoffNudge();
+}
+
+// One-time, per-session hint that guests can take their photos home. Also keeps
+// the dock "To phone" button visible once there's something to send.
+function maybeHandoffNudge() {
+  if (!handoffEnabled()) return;
+  const db = $("dockSendBtn"); if (db) db.classList.remove("hidden");
+  try { if (sessionStorage.getItem("icolorHandoffNudge")) return; sessionStorage.setItem("icolorHandoffNudge", "1"); } catch (e) {}
+  showToast(t("ho_nudge"));
 }
 
 // Bottom preview strip of recent captures (in the camera dock).
@@ -2703,38 +2735,74 @@ function renderHandoffState(state, data) {
   if (!body) return;
   data = data || {};
   if (state === "uploading") {
-    body.innerHTML = '<div class="handoff-loading"><div class="handoff-spinner" aria-hidden="true"></div><p>Preparing your photos…</p></div>';
+    body.innerHTML = '<div class="handoff-loading"><div class="handoff-spinner" aria-hidden="true"></div><p>' + esc(t("ho_prep")) + '</p></div>';
     return;
   }
   if (state === "error") {
     body.innerHTML =
-      '<div class="handoff-error"><p class="he-title">Couldn’t reach the photo box.</p>' +
-      '<p class="muted">Make sure this display is connected to the on-site Wi-Fi box, then try again.</p>' +
-      '<button id="handoffRetry" class="pill-btn">Try again</button></div>';
+      '<div class="handoff-error"><p class="he-title">' + esc(t("ho_err_title")) + '</p>' +
+      '<p class="muted">' + esc(t("ho_err_sub")) + '</p>' +
+      '<button id="handoffRetry" class="pill-btn">' + esc(t("ho_retry")) + '</button></div>';
     const r = $("handoffRetry"); if (r) r.onclick = sendToPhone;
     return;
   }
   // state === "ready"
   const wifi = wifiJoinPayload();
   const wifiBlock = wifi
-    ? '<div class="handoff-step"><div class="hs-num">1</div><div class="hs-txt"><b>Join the Wi-Fi</b>' +
-        '<span class="muted">Scan to connect — no password to type</span></div>' +
+    ? '<div class="handoff-step"><div class="hs-num">1</div><div class="hs-txt"><b>' + esc(t("ho_join")) + '</b>' +
+        '<span class="muted">' + esc(t("ho_join_sub")) + '</span></div>' +
         '<div class="hs-qr">' + qrSvg(wifi, 4) + '</div></div>'
     : '';
   const stepN = wifi ? "2" : "1";
   body.innerHTML =
-    '<p class="handoff-lead">Grab your photos on your phone 📱</p>' +
+    '<p class="handoff-lead">' + esc(t("ho_lead")) + '</p>' +
     wifiBlock +
-    '<div class="handoff-step"><div class="hs-num">' + stepN + '</div><div class="hs-txt"><b>Scan for your photos</b>' +
-      '<span class="muted">Opens a page with Save buttons</span>' +
-      (data.code ? '<span class="handoff-code">Code: ' + esc(data.code) + '</span>' : '') +
+    '<div class="handoff-step"><div class="hs-num">' + stepN + '</div><div class="hs-txt"><b>' + esc(t("ho_scan")) + '</b>' +
+      '<span class="muted">' + esc(t("ho_scan_sub")) + '</span>' +
+      (data.code ? '<span class="handoff-code">' + esc(t("ho_code")) + ': ' + esc(data.code) + '</span>' : '') +
     '</div><div class="hs-qr">' + qrSvg(data.url, 5) + '</div></div>' +
-    '<p class="handoff-foot muted">Your photos live only on the on-site box and are auto-deleted at end of day.</p>';
+    '<p class="handoff-foot muted">' + esc(t("ho_foot")) + '</p>';
+}
+
+// The store logo, inlined as a data URL once, so the guest gallery can be branded
+// even fully offline. Cached; failures are silently ignored.
+let _logoDataUrl = null, _logoTried = false;
+async function ensureLogoDataUrl() {
+  if (_logoTried) return _logoDataUrl;
+  _logoTried = true;
+  try {
+    const res = await fetch("assets/logo.svg", { cache: "force-cache" });
+    if (res.ok) {
+      const txt = await res.text();
+      if (txt && txt.length < 40000) _logoDataUrl = "data:image/svg+xml;base64," + btoa(unescape(encodeURIComponent(txt)));
+    }
+  } catch (e) {}
+  return _logoDataUrl;
+}
+
+// Compact JSON the box embeds in the guest gallery: brand, tried shades (with buy
+// links), promo and coupon — so guests can shop the look after they leave.
+async function buildHandoffInfo() {
+  const cm = CONFIG.commerce || {};
+  const byId = {}; SHADES.forEach((s) => (byId[s.id] = s));
+  const shades = triedShades.map((id) => byId[id]).filter((s) => s && s.hex).map((s) => ({
+    name: s.name, hex: s.hex,
+    buyUrl: (FEATURES.commerce && s.buyUrl) ? s.buyUrl : "",
+    price: (FEATURES.commerce && s.buyPrice) ? s.buyPrice : "",
+  }));
+  const info = { lang: LANG, currency: cm.currency || "", shades: shades };
+  try { const loc = window.Analytics && window.Analytics.currentLocation(); info.brand = (loc && loc.name) || ""; } catch (e) {}
+  const logo = await ensureLogoDataUrl(); if (logo) info.logo = logo;
+  const promo = CONFIG.promo || {};
+  if (FEATURES.promo && promo.enabled && (promo.title || promo.message)) info.promo = { title: promo.title || "", message: promo.message || "" };
+  const coupon = CONFIG.coupon || {};
+  if (FEATURES.coupon && coupon.enabled && coupon.code) info.coupon = { code: coupon.code || "", label: coupon.label || "", terms: coupon.terms || "" };
+  return info;
 }
 
 async function sendToPhone() {
-  if (!handoffEnabled()) { showToast("Photo transfer isn’t set up here."); return; }
-  if (!captures.length) { showToast("Take a photo or clip first."); return; }
+  if (!handoffEnabled()) { showToast(t("ho_not_setup")); return; }
+  if (!captures.length) { showToast(t("ho_take_first")); return; }
   const base = handoffBase();
   openHandoffModal();
   renderHandoffState("uploading");
@@ -2743,6 +2811,7 @@ async function sendToPhone() {
     const loc = window.Analytics && window.Analytics.currentLocation();
     if (loc) { fd.append("loc", loc.id || ""); fd.append("locn", loc.name || ""); }
   } catch (e) {}
+  try { fd.append("info", JSON.stringify(await buildHandoffInfo())); } catch (e) {}
   // Oldest-first so the gallery reads in capture order.
   captures.slice().reverse().forEach((c, i) => {
     const ext = c.type === "video" ? "webm" : "jpg";
@@ -2793,8 +2862,16 @@ $("closeGallery").addEventListener("click", () =>
 $("sendPhotosBtn").addEventListener("click", sendToPhone);
 $("closeHandoff").addEventListener("click", closeHandoffModal);
 $("sendAnalysisPhone").addEventListener("click", sendAnalysisToPhone);
-// Reveal the analysis-modal "To phone" button only when handoff is configured.
-if (handoffEnabled()) $("sendAnalysisPhone").classList.remove("hidden");
+$("dockSendBtn").addEventListener("click", sendToPhone);
+// Reveal the handoff affordances only when handoff is configured.
+if (handoffEnabled()) {
+  $("sendAnalysisPhone").classList.remove("hidden");
+  if (captures.length) $("dockSendBtn").classList.remove("hidden");
+  // Optional per-site custom label overrides the localized default on the main CTA.
+  const hl = (handoffCfg().label || "").trim();
+  const gp = $("sendPhotosLbl");
+  if (gp && hl) { gp.textContent = hl; gp.removeAttribute("data-i18n"); }
+}
 analysisBtn.addEventListener("click", () => openAnalysis(false));
 $("closeAnalysis").addEventListener("click", () =>
   analysisModal.classList.add("hidden")

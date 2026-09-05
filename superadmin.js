@@ -376,6 +376,7 @@
       D.kpi("Leads", D.fmt(t.leads || 0), "opted-in") +
       D.kpi("QR scans", D.fmt(t.qrscan || 0), D.fmt(t.qrshow || 0) + " hand-offs") +
       D.kpi("Shop clicks", D.fmt(t.shopclick || 0), "buy taps") +
+      D.kpi("Photos sent", D.fmt(t.handoff || 0), "to phones") +
       D.kpi("Shares", D.fmt(t.share), "social cards");
     const heatEl = $("heat"); if (heatEl) heatEl.innerHTML = D.heat(agg.perHour);
     // A/B promo comparison
@@ -399,6 +400,7 @@
       { label: "Analyses", value: t.analysis || 0, color: "#8FB24A" },
       { label: "Leads", value: t.leads || 0, color: "#B8942F" },
       { label: "Shop clicks", value: t.shopclick || 0, color: "#C06A9A" },
+      { label: "Photos sent", value: t.handoff || 0, color: "#3FA7A0" },
       { label: "QR scans", value: t.qrscan || 0, color: "#5A78A0" },
     ]);
 
