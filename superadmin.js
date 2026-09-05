@@ -95,7 +95,7 @@
     cfg.attract = Object.assign({ idleMs: 45000, shadeId: "", cta: "Tap to try your color", usePromo: false }, cfg.attract || {});
     cfg.qr = Object.assign({ baseUrl: "", scanPingUrl: "", includeShade: true }, cfg.qr || {});
     cfg.commerce = Object.assign({ currency: "₱", buttonLabel: "Add to Cart", showQr: true, checkout: "product" }, cfg.commerce || {});
-    cfg.handoff = Object.assign({ url: "", wifiSsid: "", wifiPass: "", label: "Send to my phone" }, cfg.handoff || {});
+    cfg.handoff = Object.assign({ url: "", wifiSsid: "", wifiPass: "", label: "Send to my phone", voucher: false }, cfg.handoff || {});
     cfg.privacy = Object.assign({ policyUrl: "", noticeText: "", retentionDays: 365 }, cfg.privacy || {});
     cfg.backend = Object.assign({ provider: "none", url: "" }, cfg.backend || {});
     return cfg;
@@ -277,6 +277,7 @@
       $("hoSsid").value = cfg.handoff.wifiSsid || "";
       $("hoPass").value = cfg.handoff.wifiPass || "";
       $("hoLabel").value = cfg.handoff.label || "";
+      if ($("hoVoucher")) $("hoVoucher").checked = !!cfg.handoff.voucher;
     }
     if ($("pvPolicy")) {
       $("pvPolicy").value = cfg.privacy.policyUrl || "";
@@ -327,6 +328,7 @@
     on("hoSsid", "input", (e) => (cfg.handoff.wifiSsid = e.target.value));
     on("hoPass", "input", (e) => (cfg.handoff.wifiPass = e.target.value));
     on("hoLabel", "input", (e) => (cfg.handoff.label = e.target.value));
+    on("hoVoucher", "change", (e) => (cfg.handoff.voucher = e.target.checked));
     on("pvPolicy", "input", (e) => (cfg.privacy.policyUrl = e.target.value.trim()));
     on("pvNotice", "input", (e) => (cfg.privacy.noticeText = e.target.value));
     on("pvRetention", "input", (e) => (cfg.privacy.retentionDays = parseInt(e.target.value, 10) || 0));

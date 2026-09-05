@@ -2796,7 +2796,12 @@ async function buildHandoffInfo() {
   const promo = CONFIG.promo || {};
   if (FEATURES.promo && promo.enabled && (promo.title || promo.message)) info.promo = { title: promo.title || "", message: promo.message || "" };
   const coupon = CONFIG.coupon || {};
-  if (FEATURES.coupon && coupon.enabled && coupon.code) info.coupon = { code: coupon.code || "", label: coupon.label || "", terms: coupon.terms || "" };
+  if (FEATURES.coupon && coupon.enabled) {
+    let code = coupon.code || "";
+    // Per-guest UNIQUE voucher (claimed once per session) when toggled on in admin.
+    if (handoffCfg().voucher) { try { code = await ensureSessionCoupon(); } catch (e) {} }
+    if (code) info.coupon = { code: code, label: coupon.label || "", terms: coupon.terms || "" };
+  }
   return info;
 }
 

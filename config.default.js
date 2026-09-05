@@ -176,7 +176,10 @@ window.ICOLOR_DEFAULT_CONFIG = {
   //   wifiSsid / wifiPass — the box's Wi-Fi; shown to the guest and encoded as a
   //               scan-to-join QR so they don't type a password. Blank = no join QR.
   //   label     — the guest-facing button text.
-  handoff: { url: "", wifiSsid: "", wifiPass: "", label: "Send to my phone" },
+  //   voucher   — when true (and the coupon feature is on), put this guest's UNIQUE
+  //               per-session voucher on the gallery (claimed once per session from
+  //               the pool, or a generated code); false = the static coupon.code.
+  handoff: { url: "", wifiSsid: "", wifiPass: "", label: "Send to my phone", voucher: false },
 
   // Language. codes: "en" | "tl".
   lang: { default: "en", enabled: ["en", "tl"] },
