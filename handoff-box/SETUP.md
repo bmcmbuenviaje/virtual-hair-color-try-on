@@ -92,7 +92,8 @@ uci commit dhcp
    ```sh
    GOOS=linux GOARCH=mipsle GOMIPS=softfloat go build -trimpath -ldflags "-s -w" -o icolor-handoff .
    ```
-   (A prebuilt binary may already be in `handoff-box/dist/` — see the repo.)
+   (Binaries aren't committed to keep the repo light. The `mipsle` build for the
+   Beryl is ~8 MB and statically linked — no runtime to install on the router.)
 2. **Copy** the binary to the microSD and the init script into place:
    ```sh
    scp icolor-handoff root@192.168.8.1:/mnt/mmcblk0p1/

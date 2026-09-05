@@ -8,3 +8,8 @@ Thumbs.db
 
 # Downloaded test/user captures
 assets/icolorplus-*
+
+# Compiled handoff-box binaries (built per SETUP.md; large — kept out of git)
+handoff-box/dist/
+handoff-box/*.exe
+handoff-box/icolor-handoff

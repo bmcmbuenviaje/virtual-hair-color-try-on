@@ -31,6 +31,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"html"
 	"io"
 	"log"
 	"mime"
@@ -172,8 +173,13 @@ func handleHandoff(w http.ResponseWriter, r *http.Request) {
 		}
 		name := part.FileName()
 		if name == "" {
-			// small text field (loc / locn) — capture into meta, cap the size
-			val, _ := io.ReadAll(io.LimitReader(part, 4096))
+			// small text field (loc / locn / info) — capture into meta, cap the size
+			// ("info" carries the branding + shop-the-look JSON incl. an inline logo).
+			limit := int64(4096)
+			if part.FormName() == "info" {
+				limit = 256 << 10
+			}
+			val, _ := io.ReadAll(io.LimitReader(part, limit))
 			meta[part.FormName()] = string(val)
 			part.Close()
 			continue
@@ -234,7 +240,47 @@ func handleGallery(w http.ResponseWriter, r *http.Request) {
 		writeHTML(w, http.StatusNotFound, pageExpired())
 		return
 	}
-	writeHTML(w, http.StatusOK, pageGallery(code, files))
+	writeHTML(w, http.StatusOK, pageGallery(code, files, loadInfo(dir)))
+}
+
+// ---- branding / shop-the-look payload the kiosk sends with an upload ----
+type shadeInfo struct {
+	Name   string `json:"name"`
+	Hex    string `json:"hex"`
+	BuyURL string `json:"buyUrl"`
+	Price  string `json:"price"`
+}
+type handoffInfo struct {
+	Lang     string      `json:"lang"`
+	Currency string      `json:"currency"`
+	Brand    string      `json:"brand"`
+	Logo     string      `json:"logo"`
+	Shades   []shadeInfo `json:"shades"`
+	Promo    *struct {
+		Title   string `json:"title"`
+		Message string `json:"message"`
+	} `json:"promo"`
+	Coupon *struct {
+		Code  string `json:"code"`
+		Label string `json:"label"`
+		Terms string `json:"terms"`
+	} `json:"coupon"`
+}
+
+func loadInfo(dir string) *handoffInfo {
+	b, err := os.ReadFile(filepath.Join(dir, "meta.json"))
+	if err != nil {
+		return nil
+	}
+	var m map[string]string
+	if json.Unmarshal(b, &m) != nil || m["info"] == "" {
+		return nil
+	}
+	var info handoffInfo
+	if json.Unmarshal([]byte(m["info"]), &info) != nil {
+		return nil
+	}
+	return &info
 }
 
 func handleFile(w http.ResponseWriter, r *http.Request) {
@@ -482,7 +528,27 @@ h1{font-size:20px;margin:0}
 .all{display:block;text-align:center;text-decoration:none;margin:18px 0 6px;padding:14px;border-radius:12px;background:rgba(255,255,255,.06);color:#f5f0f7;font-weight:700}
 .tip{background:rgba(184,148,47,.12);border:1px solid rgba(184,148,47,.35);border-radius:12px;padding:12px 14px;font-size:13px;color:#e8dcc0;margin:0 0 18px}
 .foot{color:#6f677d;font-size:12px;text-align:center;margin-top:26px}
-.big{text-align:center;padding:60px 16px}.big .e{font-size:52px}`
+.big{text-align:center;padding:60px 16px}.big .e{font-size:52px}
+.brand{display:flex;align-items:center;gap:10px;margin:0 0 4px}
+.brand img{height:34px;width:auto;background:transparent}
+.brand-name{font-weight:800;font-size:15px;color:#e8dcc0}
+.btn.share{background:linear-gradient(135deg,#3fa7a0,#4f8f52);color:#fff;display:none;width:100%;margin:16px 0 0;padding:14px;border-radius:12px;font-weight:800;font-size:15px;border:0;cursor:pointer}
+.btn.share:disabled{opacity:.6}
+.sec{margin:26px 0 10px;font-size:16px;font-weight:800}
+.shop{display:flex;flex-direction:column;gap:10px}
+.shop-item{display:flex;align-items:center;gap:12px;background:#151810;border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:10px 12px}
+.sw{width:34px;height:34px;border-radius:50%;flex:0 0 auto;border:1px solid rgba(255,255,255,.25)}
+.shop-item .n{flex:1;min-width:0}
+.shop-item .n b{display:block;font-size:14.5px}
+.shop-item .n span{color:#a99fb8;font-size:12.5px}
+.shop-item .buy{background:linear-gradient(135deg,#5f7d2e,#b8942f);color:#fff;text-decoration:none;padding:9px 14px;border-radius:10px;font-weight:700;font-size:13.5px;white-space:nowrap}
+.promo{background:linear-gradient(135deg,rgba(95,125,46,.25),rgba(184,148,47,.25));border:1px solid rgba(184,148,47,.4);border-radius:14px;padding:14px;margin:16px 0}
+.promo b{display:block;font-size:15px}
+.promo span{color:#d8cbe0;font-size:13px}
+.coupon{border:1px dashed rgba(184,148,47,.7);border-radius:14px;padding:14px;text-align:center;margin:16px 0}
+.coupon .code{font-size:22px;font-weight:800;letter-spacing:2px;color:#b8942f}
+.coupon .lbl{font-size:13px;color:#e8dcc0}
+.coupon .terms{font-size:11px;color:#6f677d;margin-top:4px}`
 
 func pageHead(title string) string {
 	return `<!doctype html><html lang="en"><head><meta charset="utf-8">` +
@@ -494,32 +560,139 @@ func pageFoot() string {
 	return `<p class="foot">iColor Plus · photos kept on this on-site box only, auto-deleted at end of day.</p></div></body></html>`
 }
 
-func pageGallery(code string, files []string) string {
+func pageGallery(code string, files []string, info *handoffInfo) string {
+	he := html.EscapeString
+	lang := "en"
+	if info != nil && info.Lang == "tl" {
+		lang = "tl"
+	}
+	L := func(k string) string { return tr(lang, k) }
+
 	var b strings.Builder
-	b.WriteString(pageHead("Your iColor photos"))
-	b.WriteString(`<div class="top"><span class="dot"></span><h1>Your photos are ready</h1></div>`)
-	b.WriteString(`<p class="sub">Code ` + code + ` · ` + itoa(len(files)) + ` item(s). Save the ones you want.</p>`)
-	b.WriteString(`<div class="tip">📱 <b>iPhone:</b> tap “Open”, then press &amp; hold the photo → <b>Add to Photos</b>. <b>Android:</b> tap “Save”.</div>`)
+	b.WriteString(pageHead(L("ready")))
+	// Branding (logo if the kiosk sent one, else the store name).
+	if info != nil && (info.Logo != "" || info.Brand != "") {
+		b.WriteString(`<div class="brand">`)
+		if info.Logo != "" {
+			b.WriteString(`<img src="` + he(info.Logo) + `" alt="logo">`)
+		} else {
+			b.WriteString(`<span class="brand-name">` + he(info.Brand) + `</span>`)
+		}
+		b.WriteString(`</div>`)
+	}
+	b.WriteString(`<div class="top"><span class="dot"></span><h1>` + he(L("ready")) + `</h1></div>`)
+	b.WriteString(`<p class="sub">` + he(L("code")) + ` ` + he(code) + ` · ` + itoa(len(files)) + ` ` + he(L("items")) + `</p>`)
+	b.WriteString(`<div class="tip">` + L("tip") + `</div>`)
+
 	b.WriteString(`<div class="grid">`)
+	var imgSrcs []string
 	for _, name := range files {
 		src := "/f/" + code + "/" + name
 		b.WriteString(`<div class="card">`)
 		if isVideo(name) {
 			b.WriteString(`<video src="` + src + `" controls playsinline></video>`)
 		} else {
+			imgSrcs = append(imgSrcs, src)
 			b.WriteString(`<a href="` + src + `" target="_blank" rel="noopener"><img src="` + src + `" alt="capture" loading="lazy"></a>`)
 		}
 		b.WriteString(`<div class="row">`)
-		b.WriteString(`<a class="btn g" href="` + src + `" target="_blank" rel="noopener">Open</a>`)
-		b.WriteString(`<a class="btn p" href="` + src + `?dl=1" download="` + name + `">Save</a>`)
+		b.WriteString(`<a class="btn g" href="` + src + `" target="_blank" rel="noopener">` + he(L("open")) + `</a>`)
+		b.WriteString(`<a class="btn p" href="` + src + `?dl=1" download="` + name + `">` + he(L("save")) + `</a>`)
 		b.WriteString(`</div></div>`)
 	}
 	b.WriteString(`</div>`)
-	if len(files) > 1 {
-		b.WriteString(`<a class="all" href="/z/` + code + `">⬇ Download all (.zip)</a>`)
+
+	// One-tap "Save all to Photos" (native share; shown by the script only where
+	// the browser supports sharing files — i.e. the HTTPS Tier-2 box).
+	if len(imgSrcs) > 0 {
+		b.WriteString(`<button id="saveAll" class="btn share">` + he(L("save_all")) + `</button>`)
 	}
-	b.WriteString(pageFoot())
+	if len(files) > 1 {
+		b.WriteString(`<a class="all" href="/z/` + code + `">` + he(L("download_all")) + `</a>`)
+	}
+
+	// Shop the look.
+	if info != nil && len(info.Shades) > 0 {
+		b.WriteString(`<div class="sec">` + he(L("shop")) + `</div><div class="shop">`)
+		for _, s := range info.Shades {
+			b.WriteString(`<div class="shop-item"><span class="sw" style="background:` + he(s.Hex) + `"></span>`)
+			b.WriteString(`<div class="n"><b>` + he(s.Name) + `</b>`)
+			if s.Price != "" {
+				b.WriteString(`<span>` + he(info.Currency) + he(s.Price) + `</span>`)
+			}
+			b.WriteString(`</div>`)
+			if s.BuyURL != "" {
+				b.WriteString(`<a class="buy" href="` + he(s.BuyURL) + `" target="_blank" rel="noopener">` + he(L("buy")) + `</a>`)
+			}
+			b.WriteString(`</div>`)
+		}
+		b.WriteString(`</div>`)
+	}
+	// Promo.
+	if info != nil && info.Promo != nil && (info.Promo.Title != "" || info.Promo.Message != "") {
+		b.WriteString(`<div class="promo"><b>` + he(info.Promo.Title) + `</b><span>` + he(info.Promo.Message) + `</span></div>`)
+	}
+	// Coupon.
+	if info != nil && info.Coupon != nil && info.Coupon.Code != "" {
+		b.WriteString(`<div class="coupon"><div class="code">` + he(info.Coupon.Code) + `</div>`)
+		if info.Coupon.Label != "" {
+			b.WriteString(`<div class="lbl">` + he(info.Coupon.Label) + `</div>`)
+		}
+		if info.Coupon.Terms != "" {
+			b.WriteString(`<div class="terms">` + he(info.Coupon.Terms) + `</div>`)
+		}
+		b.WriteString(`</div>`)
+	}
+
+	b.WriteString(`<p class="foot">` + he(L("foot")) + `</p></div>`)
+	// Save-all-to-Photos script.
+	imgJSON, _ := json.Marshal(imgSrcs)
+	b.WriteString(`<script>(function(){var imgs=` + string(imgJSON) + `;var btn=document.getElementById('saveAll');` +
+		`if(!btn||!imgs.length||!(navigator.canShare&&navigator.share&&window.File))return;btn.style.display='block';` +
+		`btn.addEventListener('click',async function(){btn.disabled=true;var o=btn.textContent;btn.textContent='…';try{var fs=[];` +
+		`for(var i=0;i<imgs.length;i++){var r=await fetch(imgs[i]);var bl=await r.blob();fs.push(new File([bl],'icolor-'+(i+1)+'.jpg',{type:bl.type||'image/jpeg'}));}` +
+		`if(navigator.canShare({files:fs})){await navigator.share({files:fs});}else{btn.style.display='none';}}catch(e){}btn.disabled=false;btn.textContent=o;});})();</script>`)
+	b.WriteString(`</body></html>`)
 	return b.String()
+}
+
+// ---- guest-page localization (en / tl) ----
+var guestI18N = map[string]map[string]string{
+	"en": {
+		"ready":        "Your photos are ready",
+		"code":         "Code",
+		"items":        "item(s) · save the ones you want",
+		"tip":          `📱 <b>iPhone:</b> tap “Open”, then press &amp; hold the photo → <b>Add to Photos</b>. <b>Android:</b> tap “Save”.`,
+		"open":         "Open",
+		"save":         "Save",
+		"save_all":     "⬇ Save all to Photos",
+		"download_all": "⬇ Download all (.zip)",
+		"shop":         "Shop the look",
+		"buy":          "Buy",
+		"foot":         "Photos are kept on the on-site box only and auto-deleted at end of day.",
+	},
+	"tl": {
+		"ready":        "Handa na ang mga larawan mo",
+		"code":         "Code",
+		"items":        "item · i-save ang gusto mo",
+		"tip":          `📱 <b>iPhone:</b> i-tap ang “Open”, tapos pindutin nang matagal ang larawan → <b>Add to Photos</b>. <b>Android:</b> i-tap ang “Save”.`,
+		"open":         "Buksan",
+		"save":         "I-save",
+		"save_all":     "⬇ I-save lahat sa Photos",
+		"download_all": "⬇ I-download lahat (.zip)",
+		"shop":         "Bilhin ang hitsura",
+		"buy":          "Bilhin",
+		"foot":         "Nasa on-site box lang ang mga larawan at awtomatikong buburahin sa katapusan ng araw.",
+	},
+}
+
+func tr(lang, key string) string {
+	if m, ok := guestI18N[lang]; ok {
+		if v, ok := m[key]; ok && v != "" {
+			return v
+		}
+	}
+	return guestI18N["en"][key]
 }
 
 func pageExpired() string {
