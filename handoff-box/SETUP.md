@@ -141,6 +141,61 @@ On each tablet / Android-TV kiosk, open **Super Admin → Content & config**:
    QR → a gallery opens at `https://icolorkiosk.duckdns.org:8443/g/XXXX` with
    **Save** buttons. Save a photo; play/save a video.
 
+### Mango (GL-MT300N-V2) — 16 MB flash: run everything from the USB stick
+The Mango is the **cheapest** box (~₱1,200), but its 16 MB flash is too small for
+the binary + captures — so keep those on a **USB flash drive** and point acme.sh
+at the stick too. It's MIPS, so use the **`mipsle`** binary (same one as the
+MT1300). Everything below **replaces** steps C/D/F for the Mango; A, B, E, G, H
+are unchanged.
+
+```sh
+ssh root@192.168.8.1
+
+# 1) Confirm the USB stick mounted (GL.iNet automounts it):
+ls /mnt            # expect: sda1     →  we'll use /mnt/sda1
+mkdir -p /mnt/sda1/icolor /mnt/sda1/captures
+
+# 2) Cert via DuckDNS DNS-01 — acme.sh lives on the stick, not flash.
+#    (DNS mode needs only curl + openssl, already in the firmware. If you hit a
+#     TLS-trust error, run:  opkg update && opkg install ca-bundle )
+export DuckDNS_Token="PASTE-YOUR-DUCKDNS-TOKEN"
+wget -O - https://get.acme.sh | sh -s -- --home /mnt/sda1/.acme.sh --accountemail you@example.com
+/mnt/sda1/.acme.sh/acme.sh --home /mnt/sda1/.acme.sh \
+  --issue --dns dns_duckdns -d icolorkiosk.duckdns.org --server letsencrypt
+/mnt/sda1/.acme.sh/acme.sh --home /mnt/sda1/.acme.sh \
+  --install-cert -d icolorkiosk.duckdns.org \
+  --key-file       /mnt/sda1/icolor/handoff.key \
+  --fullchain-file /mnt/sda1/icolor/fullchain.cer \
+  --reloadcmd      "/etc/init.d/icolor-handoff restart"
+```
+
+Then copy the **MIPS** binary + init script (from your PC):
+```sh
+scp icolor-handoff root@192.168.8.1:/mnt/sda1/
+scp openwrt/icolor-handoff root@192.168.8.1:/etc/init.d/icolor-handoff
+```
+
+On the router, edit `/etc/init.d/icolor-handoff` so the top reads:
+```sh
+STORAGE=/mnt/sda1
+BIN=$STORAGE/icolor-handoff
+CERTDIR=/mnt/sda1/icolor
+```
+Then:
+```sh
+chmod +x /mnt/sda1/icolor-handoff /etc/init.d/icolor-handoff
+/etc/init.d/icolor-handoff enable
+/etc/init.d/icolor-handoff start
+logread -e icolor      # should show "HTTPS on :8443"
+```
+
+Everything else (DuckDNS name, the dnsmasq override in step E, the kiosk config in
+step G, testing in H) is the same. Kiosk **Box URL** stays
+`https://icolorkiosk.duckdns.org:8443`.
+
+> Note: the stock init script's `CERTDIR` is `/etc/icolor`; the Mango override
+> above moves it to `/mnt/sda1/icolor` so nothing is written to the tiny flash.
+
 ---
 
 ## Tier 0 — Windows mini-PC (self-host, no extra hardware, ₱0)
