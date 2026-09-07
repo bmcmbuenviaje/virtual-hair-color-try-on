@@ -42,6 +42,10 @@ window.ICOLOR_DEFAULT_CONFIG = {
   // Cap the number of visible colours (null = no cap). Basic tier = 5.
   maxShades: null,
 
+  // Starting colour intensity for the try-on slider, 0–100 (guests can still
+  // adjust it live). Editable in Admin & Super Admin. Lower = subtler/more natural.
+  defaultIntensity: 25,
+
   // Feature switches. CONTROLLED BY SUPER ADMIN ONLY (superadmin.html).
   features: {
     photo: true,       // take photo

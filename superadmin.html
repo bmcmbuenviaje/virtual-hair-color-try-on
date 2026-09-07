@@ -49,6 +49,16 @@
       <div class="row presets" id="presets" style="margin-top:12px"></div>
     </div>
 
+    <div class="a-card" id="sa-card-tryon">
+      <h2>Try-on defaults <span class="muted">— starting intensity</span></h2>
+      <div class="row" style="gap:10px;align-items:center">
+        <label class="inline">Default intensity</label>
+        <input id="defIntensity" type="range" min="0" max="100" style="max-width:240px" />
+        <span id="defIntensityVal" class="num" style="min-width:44px">25%</span>
+      </div>
+      <p class="hint" style="color:var(--muted);font-size:12.5px;margin:8px 0 0">Where the colour-intensity slider starts for each guest (0–100). Lower = subtler, more natural; guests can still slide it live.</p>
+    </div>
+
     <div class="a-card">
       <h2>Features <span class="muted">— Super Admin only</span></h2>
       <p class="hint" style="color:var(--muted);font-size:12.5px;margin:-4px 0 12px">Turning a feature on lets the client edit its content (promo banner, coupon, print design) in their own admin.</p>

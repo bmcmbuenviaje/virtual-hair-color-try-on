@@ -173,7 +173,12 @@ let lastVideoTime = -1;
 
 let selectedShade =
   SHADES.find((s) => s.id === "dark-brown") || SHADES.find((s) => s.hex) || SHADES[0]; // start shade
-let strength = 0.85;
+// Starting intensity (0–100) from config; guests can still slide it live.
+const DEFAULT_INTENSITY = Math.max(0, Math.min(100,
+  parseInt(CONFIG.defaultIntensity != null ? CONFIG.defaultIntensity : 85, 10) || 0));
+let strength = DEFAULT_INTENSITY / 100;
+if (intensity) { intensity.value = DEFAULT_INTENSITY; }
+if (intensityVal) { intensityVal.textContent = DEFAULT_INTENSITY + "%"; }
 
 let splitView = false;
 let splitX = 0.5;
@@ -2909,9 +2914,9 @@ function initAppUIOnce() {
   buildSwatches();
   buildGridItems();
   selectShade(selectedShade);
-  intensity.value = 85;
-  strength = 0.85;
-  intensityVal.textContent = "85%";
+  intensity.value = DEFAULT_INTENSITY;
+  strength = DEFAULT_INTENSITY / 100;
+  intensityVal.textContent = DEFAULT_INTENSITY + "%";
 }
 
 function setStaticUI(on) {
