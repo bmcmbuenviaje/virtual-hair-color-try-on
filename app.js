@@ -80,7 +80,7 @@ const I18N = {
     ho_retry: "Try again", ho_send: "Send to my phone", ho_tophone: "To phone",
     ho_not_setup: "Photo transfer isn’t set up here.", ho_take_first: "Take a photo or clip first.",
     ho_nudge: "📱 Tap “Send to my phone” to take your photos home.",
-    uses_one: "After 1 use", uses_n: "After {n} uses", uses_full: "After 10+ uses",
+    lvl_base: "Your hair (dark)", lvl_app_one: "After 1 app · Level {L}", lvl_app_n: "After {n} apps · Level {L}",
     langName: "EN",
   },
   tl: {
@@ -99,7 +99,7 @@ const I18N = {
     ho_retry: "Subukan muli", ho_send: "Ipadala sa telepono ko", ho_tophone: "Sa telepono",
     ho_not_setup: "Hindi naka-setup ang paglipat ng larawan dito.", ho_take_first: "Kumuha muna ng larawan o video.",
     ho_nudge: "📱 I-tap ang “Ipadala sa telepono ko” para maiuwi ang mga larawan.",
-    uses_one: "Pagkatapos ng 1 paggamit", uses_n: "Pagkatapos ng {n} paggamit", uses_full: "Pagkatapos ng 10+ paggamit",
+    lvl_base: "Buhok mo (madilim)", lvl_app_one: "Pagkatapos ng 1 app · Level {L}", lvl_app_n: "Pagkatapos ng {n} apps · Level {L}",
     langName: "TL",
   },
 };
@@ -119,7 +119,7 @@ function setLang(code) {
   // The "After N uses" label is dynamic (not data-i18n) — refresh it too.
   try {
     const iv = document.getElementById("intensityVal"), inp = document.getElementById("intensity");
-    if (iv && inp) iv.textContent = usesLabel(parseInt(inp.value, 10) || 1);
+    if (iv && inp) iv.textContent = levelLabel(parseInt(inp.value, 10) || 0);
   } catch (e) {}
 }
 
@@ -193,27 +193,28 @@ let lastVideoTime = -1;
 
 let selectedShade =
   SHADES.find((s) => s.id === "dark-brown") || SHADES.find((s) => s.hex) || SHADES[0]; // start shade
-// --- Shampoo-in colour build-up model (replaces the raw intensity slider) ---
-// A shampoo-in colour is subtle after the 1st wash and reaches a rich, natural
-// result around ~10 consistent uses — building fastest early, then plateauing
-// (color shampoos give a subtle shift at first; a natural result near ~10 uses).
-// The slider is "number of uses" (1–10) mapped to deposit strength.
-const MAX_USES = 10;
-function usesToStrength(n) {
-  n = Math.max(1, Math.min(MAX_USES, n | 0));
-  return Math.max(0.05, Math.min(0.96, 1 - Math.exp(-0.30 * n))); // saturating build-up
+// --- Hair-level / lightening model (research-grounded to how iColor works) ---
+// iColor Plus is a SHAMPOO-IN deposit colour: one 30–45 min application lays the
+// colour down. How that colour READS depends on the hair's LIGHTNESS/level — which
+// you raise with the Love Color Lightening Créme (~1 level per 35-min application:
+// app 1 → Level 6 … app 5 → Level 10). So the slider walks the lightening ladder:
+// darker base (colour looks deep/muted) → lighter base (ash/nude/pastels show true).
+// Each stop maps to a "lift" that pre-lightens the base inside makeLUT(). This also
+// covers the box swatches (virgin ≈ stop 0, pre-lightened ≈ mid, Level 9 ≈ stop 4).
+const LEVEL_LIFT = [0.00, 0.30, 0.48, 0.63, 0.78, 0.90]; // stop 0..5 → base pre-lighten
+const MAX_LEVEL = LEVEL_LIFT.length - 1;                 // 5 applications
+const DEPOSIT_STRENGTH = 0.9;                            // one application lays full colour
+function levelLabel(i) {
+  i = Math.max(0, Math.min(MAX_LEVEL, i | 0));
+  if (i === 0) return t("lvl_base");
+  return t(i === 1 ? "lvl_app_one" : "lvl_app_n").replace("{n}", i).replace("{L}", 5 + i);
 }
-function usesLabel(n) {
-  n = Math.max(1, Math.min(MAX_USES, n | 0));
-  if (n >= MAX_USES) return t("uses_full");
-  return t(n === 1 ? "uses_one" : "uses_n").replace("{n}", n);
-}
-const DEFAULT_USES = Math.max(1, Math.min(MAX_USES,
-  parseInt(CONFIG.defaultUses != null ? CONFIG.defaultUses : 3, 10) || 3));
-let uses = DEFAULT_USES;
-let strength = usesToStrength(uses);
-if (intensity) intensity.value = DEFAULT_USES;
-if (intensityVal) intensityVal.textContent = usesLabel(DEFAULT_USES);
+let level = Math.max(0, Math.min(MAX_LEVEL,
+  parseInt(CONFIG.defaultLevel != null ? CONFIG.defaultLevel : 0, 10) || 0));
+let liftAmt = LEVEL_LIFT[level];   // current base pre-lightening (read by makeLUT)
+let strength = DEPOSIT_STRENGTH;   // deposit alpha (fixed — colour is one application)
+if (intensity) intensity.value = level;
+if (intensityVal) intensityVal.textContent = levelLabel(level);
 
 let splitView = false;
 let splitX = 0.5;
@@ -339,7 +340,7 @@ function makeLUT(hex) {
   const fg = (dg / 255) * DEPOSIT_GAIN;
   const fb = (db / 255) * DEPOSIT_GAIN;
   for (let v = 0; v < 256; v++) {
-    const base = boost ? v + (255 - v) * BOOST_LIFT : v;
+    const base = v + (255 - v) * liftAmt; // pre-lighten the base to the chosen hair level
     R[v] = base * fr;
     G[v] = base * fg;
     B[v] = base * fb;
@@ -949,7 +950,7 @@ function buildComparisonSheet() {
   c.textAlign = "center";
   c.textBaseline = "middle";
   c.fillText(
-    "Digital preview — actual results may vary. " + usesLabel(uses) + ".",
+    "Digital preview — actual results may vary. " + levelLabel(level) + ".",
     W / 2,
     H - footerH / 2
   );
@@ -2499,9 +2500,11 @@ boostBtn.addEventListener("click", () => setBoost(!boost));
 sheetBtn.addEventListener("click", saveComparisonSheet);
 
 intensity.addEventListener("input", () => {
-  uses = parseInt(intensity.value, 10) || 1;
-  strength = usesToStrength(uses);
-  intensityVal.textContent = usesLabel(uses);
+  level = Math.max(0, Math.min(MAX_LEVEL, parseInt(intensity.value, 10) || 0));
+  liftAmt = LEVEL_LIFT[level];
+  setSelectedLUT(selectedShade.hex); // rebuild the LUT for the new base lightness
+  if (gridMode) buildGridItems();    // the compare grid bakes per-shade LUTs too
+  intensityVal.textContent = levelLabel(level);
   invalidate();
 });
 
@@ -2950,10 +2953,9 @@ function initAppUIOnce() {
   buildSwatches();
   buildGridItems();
   selectShade(selectedShade);
-  intensity.value = DEFAULT_USES;
-  uses = DEFAULT_USES;
-  strength = usesToStrength(DEFAULT_USES);
-  intensityVal.textContent = usesLabel(DEFAULT_USES);
+  intensity.value = level;
+  liftAmt = LEVEL_LIFT[level];
+  intensityVal.textContent = levelLabel(level);
 }
 
 function setStaticUI(on) {
@@ -3259,7 +3261,7 @@ function applyFeatureGating() {
   if (!FEATURES.video) hideEl(recordBtn);
   if (!FEATURES.split) hideEl(splitBtn);
   if (!FEATURES.grid) { hideEl(gridBtn); hideEl(sheetBtn); }
-  if (!FEATURES.brighten) hideEl(boostBtn);
+  hideEl(boostBtn); // the hair-level slider replaces the old Brighten toggle
   if (!FEATURES.analysis) hideEl(analysisBtn);
   if (!FEATURES.photo && !FEATURES.video) hideEl(galleryBtn);
   if (!FEATURES.cards) { hideEl($("shareBtn")); hideEl($("saveImgBtn")); }

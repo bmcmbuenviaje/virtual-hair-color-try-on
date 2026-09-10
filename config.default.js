@@ -42,10 +42,12 @@ window.ICOLOR_DEFAULT_CONFIG = {
   // Cap the number of visible colours (null = no cap). Basic tier = 5.
   maxShades: null,
 
-  // The try-on slider models a shampoo-in colour building up over repeated use
-  // ("After N uses", 1–10). This is where the slider STARTS for each guest (they
-  // can still slide it). Editable in Admin & Super Admin. ~3 = a natural few-uses look.
-  defaultUses: 3,
+  // The try-on slider models the hair's LIGHTNESS/level — how a shade reads on a
+  // dark base (0 = your natural dark hair) vs after lightening applications
+  // (1→5 ≈ Level 6→10, via the Love Color Lightening Créme). This is where the
+  // slider STARTS for each guest (they can still slide it). 0 = show on their real
+  // dark base (most accurate); raise it to preview lighter/ash/nude looks.
+  defaultLevel: 0,
 
   // Feature switches. CONTROLLED BY SUPER ADMIN ONLY (superadmin.html).
   features: {

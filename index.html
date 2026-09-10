@@ -175,13 +175,13 @@
     <!-- Colors + intensity (collapsible to reveal the full camera) -->
     <div class="dock-colors">
       <button id="colorsToggle" class="colors-toggle" aria-expanded="true" aria-controls="dockColorsBody">
-        <span class="ct-dot" aria-hidden="true"></span><span>Colours &amp; wear</span><span class="ct-chev" aria-hidden="true">▾</span>
+        <span class="ct-dot" aria-hidden="true"></span><span>Colours &amp; level</span><span class="ct-chev" aria-hidden="true">▾</span>
       </button>
       <div class="dock-colors-body" id="dockColorsBody">
         <div class="intensity-row">
           <span class="intensity-icon" aria-hidden="true">🧴</span>
-          <input id="intensity" type="range" min="1" max="10" step="1" value="3" aria-label="Colour build-up over continuous use" />
-          <span id="intensityVal" class="intensity-val">After 3 uses</span>
+          <input id="intensity" type="range" min="0" max="5" step="1" value="0" aria-label="Hair level — lightening applications" />
+          <span id="intensityVal" class="intensity-val">Your hair (dark)</span>
         </div>
         <div class="swatches-wrap">
           <div id="swatches" class="swatches" role="listbox" aria-label="iColor Plus shades"></div>
