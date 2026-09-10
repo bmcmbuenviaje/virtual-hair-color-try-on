@@ -332,7 +332,7 @@ textarea:focus-visible, [tabindex]:focus-visible, [role="button"]:focus-visible 
   padding: 12px 20px 6px; max-width: 620px; width: 100%; margin: 0 auto;
 }
 .intensity-icon { color: var(--muted); font-size: 18px; }
-.intensity-val { color: var(--muted); font-size: 13px; width: 42px; text-align: right; font-variant-numeric: tabular-nums; }
+.intensity-val { color: var(--muted); font-size: 13px; min-width: 88px; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
 input[type="range"] {
   -webkit-appearance: none; appearance: none; flex: 1; height: 6px; border-radius: 999px;
   background: linear-gradient(90deg, var(--accent), var(--accent-2)); outline: none;

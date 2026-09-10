@@ -98,7 +98,7 @@
     cfg.handoff = Object.assign({ url: "", wifiSsid: "", wifiPass: "", label: "Send to my phone", voucher: false }, cfg.handoff || {});
     cfg.privacy = Object.assign({ policyUrl: "", noticeText: "", retentionDays: 365 }, cfg.privacy || {});
     cfg.backend = Object.assign({ provider: "none", url: "" }, cfg.backend || {});
-    if (cfg.defaultIntensity == null) cfg.defaultIntensity = 25;
+    if (cfg.defaultUses == null) cfg.defaultUses = 3;
     return cfg;
   }
   let cfg = loadCfg();
@@ -274,8 +274,9 @@
       $("qrScanPing").value = cfg.qr.scanPingUrl || "";
     }
     if ($("defIntensity")) {
-      $("defIntensity").value = cfg.defaultIntensity;
-      if ($("defIntensityVal")) $("defIntensityVal").textContent = cfg.defaultIntensity + "%";
+      const usesText = (n) => (n >= 10 ? "After 10+ uses" : "After " + n + (n === 1 ? " use" : " uses"));
+      $("defIntensity").value = cfg.defaultUses;
+      if ($("defIntensityVal")) $("defIntensityVal").textContent = usesText(cfg.defaultUses);
     }
     if ($("hoUrl")) {
       $("hoUrl").value = cfg.handoff.url || "";
@@ -330,9 +331,9 @@
     on("qrBaseUrl", "input", (e) => (cfg.qr.baseUrl = e.target.value.trim()));
     on("qrScanPing", "input", (e) => (cfg.qr.scanPingUrl = e.target.value.trim()));
     on("defIntensity", "input", (e) => {
-      const v = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0));
-      cfg.defaultIntensity = v;
-      if ($("defIntensityVal")) $("defIntensityVal").textContent = v + "%";
+      const v = Math.max(1, Math.min(10, parseInt(e.target.value, 10) || 1));
+      cfg.defaultUses = v;
+      if ($("defIntensityVal")) $("defIntensityVal").textContent = (v >= 10 ? "After 10+ uses" : "After " + v + (v === 1 ? " use" : " uses"));
     });
     on("hoUrl", "input", (e) => (cfg.handoff.url = e.target.value.trim()));
     on("hoSsid", "input", (e) => (cfg.handoff.wifiSsid = e.target.value));

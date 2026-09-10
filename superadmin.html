@@ -50,13 +50,13 @@
     </div>
 
     <div class="a-card" id="sa-card-tryon">
-      <h2>Try-on defaults <span class="muted">— starting intensity</span></h2>
+      <h2>Try-on defaults <span class="muted">— starting look (continuous use)</span></h2>
       <div class="row" style="gap:10px;align-items:center">
-        <label class="inline">Default intensity</label>
-        <input id="defIntensity" type="range" min="0" max="100" style="max-width:240px" />
-        <span id="defIntensityVal" class="num" style="min-width:44px">25%</span>
+        <label class="inline">Default look</label>
+        <input id="defIntensity" type="range" min="1" max="10" step="1" style="max-width:240px" />
+        <span id="defIntensityVal" class="num" style="min-width:96px">After 3 uses</span>
       </div>
-      <p class="hint" style="color:var(--muted);font-size:12.5px;margin:8px 0 0">Where the colour-intensity slider starts for each guest (0–100). Lower = subtler, more natural; guests can still slide it live.</p>
+      <p class="hint" style="color:var(--muted);font-size:12.5px;margin:8px 0 0">The slider models a shampoo-in colour building up over repeated use (“After N uses”, 1–10). This sets where it starts for each guest; they can still slide it live. ~3 uses = a natural early result.</p>
     </div>
 
     <div class="a-card">

@@ -17,7 +17,20 @@ const HAIR_MODEL =
 
 const MAX_RECORD_MS = 30000; // 30-second cap
 const PROC_MAX_W = 640; // processing width cap for the pixel loop
-const MASK_CUTOFF = 0.15; // ignore pixels below this hair confidence
+const MASK_CUTOFF = 0.15; // legacy soft cutoff (kept for reference; see maskAlpha)
+
+// Hair-mask edge firming. MediaPipe's confidence has a soft halo around the hair
+// that spills onto the forehead / scalp / temples — so raw confidence would tint
+// skin. maskAlpha() zeroes anything below MASK_LO (skin/scalp) and smoothsteps up
+// to full only for solid hair, so the colour never lands on the scalp.
+const MASK_LO = 0.55; // below this = not hair → no colour at all
+const MASK_HI = 0.82; // at/above this = solid hair → full colour
+function maskAlpha(m) {
+  if (m <= MASK_LO) return 0;
+  if (m >= MASK_HI) return 1;
+  const t = (m - MASK_LO) / (MASK_HI - MASK_LO);
+  return t * t * (3 - 2 * t); // smoothstep — clean, firm hairline
+}
 
 /* ---- Dye "deposit" model tuning ----
    Hair color is simulated as a subtractive (multiply) mix of the person's
@@ -67,6 +80,7 @@ const I18N = {
     ho_retry: "Try again", ho_send: "Send to my phone", ho_tophone: "To phone",
     ho_not_setup: "Photo transfer isn’t set up here.", ho_take_first: "Take a photo or clip first.",
     ho_nudge: "📱 Tap “Send to my phone” to take your photos home.",
+    uses_one: "After 1 use", uses_n: "After {n} uses", uses_full: "After 10+ uses",
     langName: "EN",
   },
   tl: {
@@ -85,6 +99,7 @@ const I18N = {
     ho_retry: "Subukan muli", ho_send: "Ipadala sa telepono ko", ho_tophone: "Sa telepono",
     ho_not_setup: "Hindi naka-setup ang paglipat ng larawan dito.", ho_take_first: "Kumuha muna ng larawan o video.",
     ho_nudge: "📱 I-tap ang “Ipadala sa telepono ko” para maiuwi ang mga larawan.",
+    uses_one: "Pagkatapos ng 1 paggamit", uses_n: "Pagkatapos ng {n} paggamit", uses_full: "Pagkatapos ng 10+ paggamit",
     langName: "TL",
   },
 };
@@ -101,6 +116,11 @@ function setLang(code) {
   applyI18n();
   const lb = document.getElementById("langBtn");
   if (lb) lb.textContent = I18N[LANG].langName;
+  // The "After N uses" label is dynamic (not data-i18n) — refresh it too.
+  try {
+    const iv = document.getElementById("intensityVal"), inp = document.getElementById("intensity");
+    if (iv && inp) iv.textContent = usesLabel(parseInt(inp.value, 10) || 1);
+  } catch (e) {}
 }
 
 // Build the active shade list from config: skip hidden shades, cap to maxShades,
@@ -173,12 +193,27 @@ let lastVideoTime = -1;
 
 let selectedShade =
   SHADES.find((s) => s.id === "dark-brown") || SHADES.find((s) => s.hex) || SHADES[0]; // start shade
-// Starting intensity (0–100) from config; guests can still slide it live.
-const DEFAULT_INTENSITY = Math.max(0, Math.min(100,
-  parseInt(CONFIG.defaultIntensity != null ? CONFIG.defaultIntensity : 85, 10) || 0));
-let strength = DEFAULT_INTENSITY / 100;
-if (intensity) { intensity.value = DEFAULT_INTENSITY; }
-if (intensityVal) { intensityVal.textContent = DEFAULT_INTENSITY + "%"; }
+// --- Shampoo-in colour build-up model (replaces the raw intensity slider) ---
+// A shampoo-in colour is subtle after the 1st wash and reaches a rich, natural
+// result around ~10 consistent uses — building fastest early, then plateauing
+// (color shampoos give a subtle shift at first; a natural result near ~10 uses).
+// The slider is "number of uses" (1–10) mapped to deposit strength.
+const MAX_USES = 10;
+function usesToStrength(n) {
+  n = Math.max(1, Math.min(MAX_USES, n | 0));
+  return Math.max(0.05, Math.min(0.96, 1 - Math.exp(-0.30 * n))); // saturating build-up
+}
+function usesLabel(n) {
+  n = Math.max(1, Math.min(MAX_USES, n | 0));
+  if (n >= MAX_USES) return t("uses_full");
+  return t(n === 1 ? "uses_one" : "uses_n").replace("{n}", n);
+}
+const DEFAULT_USES = Math.max(1, Math.min(MAX_USES,
+  parseInt(CONFIG.defaultUses != null ? CONFIG.defaultUses : 3, 10) || 3));
+let uses = DEFAULT_USES;
+let strength = usesToStrength(uses);
+if (intensity) intensity.value = DEFAULT_USES;
+if (intensityVal) intensityVal.textContent = usesLabel(DEFAULT_USES);
 
 let splitView = false;
 let splitX = 0.5;
@@ -547,8 +582,9 @@ function recolorProc(pw, ph) {
     const rowPix = y * pw;
     for (let x = 0; x < pw; x++) {
       const m = maskData[rowMask + mapX[x]];
-      if (m < MASK_CUTOFF) continue;
-      const a = m * s;
+      const ma = maskAlpha(m);
+      if (ma <= 0) continue;
+      const a = ma * s;
       const i = (rowPix + x) << 2;
       const r = d[i], g = d[i + 1], b = d[i + 2];
       const lum = (r * 77 + g * 150 + b * 29) >> 8;
@@ -788,8 +824,9 @@ function recolorBuffer(work, w, h, lut, mapx, mapy, mirror) {
     for (let x = 0; x < w; x++) {
       const mx = mirror ? maskW - 1 - mapx[x] : mapx[x];
       const m = maskData[rowMask + mx];
-      if (m < MASK_CUTOFF) continue;
-      const a = m * s;
+      const ma = maskAlpha(m);
+      if (ma <= 0) continue;
+      const a = ma * s;
       const i = (rowPix + x) << 2;
       const r = work[i], g = work[i + 1], b = work[i + 2];
       const lum = (r * 77 + g * 150 + b * 29) >> 8;
@@ -912,9 +949,7 @@ function buildComparisonSheet() {
   c.textAlign = "center";
   c.textBaseline = "middle";
   c.fillText(
-    "Digital preview — actual results may vary. Intensity " +
-      Math.round(strength * 100) +
-      "%.",
+    "Digital preview — actual results may vary. " + usesLabel(uses) + ".",
     W / 2,
     H - footerH / 2
   );
@@ -2464,8 +2499,9 @@ boostBtn.addEventListener("click", () => setBoost(!boost));
 sheetBtn.addEventListener("click", saveComparisonSheet);
 
 intensity.addEventListener("input", () => {
-  strength = intensity.value / 100;
-  intensityVal.textContent = intensity.value + "%";
+  uses = parseInt(intensity.value, 10) || 1;
+  strength = usesToStrength(uses);
+  intensityVal.textContent = usesLabel(uses);
   invalidate();
 });
 
@@ -2914,9 +2950,10 @@ function initAppUIOnce() {
   buildSwatches();
   buildGridItems();
   selectShade(selectedShade);
-  intensity.value = DEFAULT_INTENSITY;
-  strength = DEFAULT_INTENSITY / 100;
-  intensityVal.textContent = DEFAULT_INTENSITY + "%";
+  intensity.value = DEFAULT_USES;
+  uses = DEFAULT_USES;
+  strength = usesToStrength(DEFAULT_USES);
+  intensityVal.textContent = usesLabel(DEFAULT_USES);
 }
 
 function setStaticUI(on) {

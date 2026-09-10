@@ -65,12 +65,13 @@
   cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true, source: "generated" }, cfg.coupon || {});
   cfg.printLayout = Object.assign({ title: "Personalized Hair Colour Analysis", accentFrom: "#5f7d2e", accentTo: "#b8942f", footer: "", showBrighten: true, showMatches: true }, cfg.printLayout || {});
   cfg.commerce = Object.assign({ currency: "₱", buttonLabel: "Add to Cart", showQr: true, checkout: "product" }, cfg.commerce || {});
-  if (cfg.defaultIntensity == null) cfg.defaultIntensity = (DEFAULT.defaultIntensity != null ? DEFAULT.defaultIntensity : 25);
+  if (cfg.defaultUses == null) cfg.defaultUses = (DEFAULT.defaultUses != null ? DEFAULT.defaultUses : 3);
+  const usesText = (n) => (n >= 10 ? "After 10+ uses" : "After " + n + (n === 1 ? " use" : " uses"));
 
   function renderContentEditors() {
     if ($("defIntensity")) {
-      $("defIntensity").value = cfg.defaultIntensity;
-      if ($("defIntensityVal")) $("defIntensityVal").textContent = cfg.defaultIntensity + "%";
+      $("defIntensity").value = cfg.defaultUses;
+      if ($("defIntensityVal")) $("defIntensityVal").textContent = usesText(cfg.defaultUses);
     }
     if ($("promoEnabled")) {
       $("promoEnabled").checked = !!cfg.promo.enabled;
@@ -104,9 +105,9 @@
   function wireContentEditors() {
     const on = (id, ev, fn) => { const el = $(id); if (el) el.addEventListener(ev, fn); };
     on("defIntensity", "input", (e) => {
-      const v = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0));
-      cfg.defaultIntensity = v;
-      if ($("defIntensityVal")) $("defIntensityVal").textContent = v + "%";
+      const v = Math.max(1, Math.min(10, parseInt(e.target.value, 10) || 1));
+      cfg.defaultUses = v;
+      if ($("defIntensityVal")) $("defIntensityVal").textContent = usesText(v);
     });
     on("promoEnabled", "change", (e) => (cfg.promo.enabled = e.target.checked));
     on("promoShade", "change", (e) => (cfg.promo.shadeId = e.target.value));

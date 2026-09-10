@@ -42,9 +42,10 @@ window.ICOLOR_DEFAULT_CONFIG = {
   // Cap the number of visible colours (null = no cap). Basic tier = 5.
   maxShades: null,
 
-  // Starting colour intensity for the try-on slider, 0–100 (guests can still
-  // adjust it live). Editable in Admin & Super Admin. Lower = subtler/more natural.
-  defaultIntensity: 25,
+  // The try-on slider models a shampoo-in colour building up over repeated use
+  // ("After N uses", 1–10). This is where the slider STARTS for each guest (they
+  // can still slide it). Editable in Admin & Super Admin. ~3 = a natural few-uses look.
+  defaultUses: 3,
 
   // Feature switches. CONTROLLED BY SUPER ADMIN ONLY (superadmin.html).
   features: {
