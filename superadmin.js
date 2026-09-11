@@ -102,12 +102,15 @@
     cfg.promo.ab = Object.assign({ enabled: false, title: "", message: "", shadeId: "", image: "" }, cfg.promo.ab || {});
     cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true, source: "generated" }, cfg.coupon || {});
     cfg.printLayout = Object.assign({ title: "Personalized Hair Colour Analysis", accentFrom: "#5f7d2e", accentTo: "#b8942f", footer: "", showBrighten: true, showMatches: true }, cfg.printLayout || {});
-    cfg.print = Object.assign({ mode: "color", transport: "bluetooth", widthMm: 58, qr: true, copies: 1, header: "", footer: "Great Lengths PH" }, cfg.print || {});
+    cfg.print = Object.assign({ mode: "color", transport: "bluetooth", widthMm: 58, qr: true, copies: 1, header: "", footer: "Great Lengths PH", paperRoll: 0 }, cfg.print || {});
+    cfg.kit = Object.assign({ bundleUrl: "", items: [] }, cfg.kit || {});
+    if (!cfg.kit.items.length) cfg.kit.items = JSON.parse(JSON.stringify(((window.ICOLOR_DEFAULT_CONFIG || {}).kit || {}).items || []));
     cfg.attract = Object.assign({ idleMs: 45000, shadeId: "", cta: "Tap to try your color", usePromo: false }, cfg.attract || {});
     cfg.qr = Object.assign({ baseUrl: "", scanPingUrl: "", includeShade: true }, cfg.qr || {});
     cfg.commerce = Object.assign({ currency: "₱", buttonLabel: "Add to Cart", showQr: true, checkout: "product" }, cfg.commerce || {});
     cfg.handoff = Object.assign({ url: "", wifiSsid: "", wifiPass: "", label: "Send to my phone", voucher: false }, cfg.handoff || {});
     cfg.privacy = Object.assign({ policyUrl: "", noticeText: "", retentionDays: 365 }, cfg.privacy || {});
+    cfg.leads = Object.assign({ enabled: false, requireEmail: true, consentText: "I agree to receive iColor Plus updates and offers from Great Lengths.", webhook: "" }, cfg.leads || {});
     cfg.backend = Object.assign({ provider: "none", url: "" }, cfg.backend || {});
     if (cfg.defaultLevel == null) cfg.defaultLevel = 0;
     if (cfg.colorStrength == null) cfg.colorStrength = 0.22;
@@ -317,6 +320,9 @@
       $("pvPolicy").value = cfg.privacy.policyUrl || "";
       $("pvRetention").value = cfg.privacy.retentionDays != null ? cfg.privacy.retentionDays : 365;
       $("pvNotice").value = cfg.privacy.noticeText || "";
+      if ($("ldConsent")) $("ldConsent").value = cfg.leads.consentText || "";
+      if ($("ldWebhook")) $("ldWebhook").value = cfg.leads.webhook || "";
+      if ($("ldReqEmail")) $("ldReqEmail").checked = cfg.leads.requireEmail !== false;
     }
   }
   function wireContentEditors() {
@@ -391,6 +397,9 @@
     on("pvPolicy", "input", (e) => (cfg.privacy.policyUrl = e.target.value.trim()));
     on("pvNotice", "input", (e) => (cfg.privacy.noticeText = e.target.value));
     on("pvRetention", "input", (e) => (cfg.privacy.retentionDays = parseInt(e.target.value, 10) || 0));
+    on("ldConsent", "input", (e) => (cfg.leads.consentText = e.target.value));
+    on("ldWebhook", "input", (e) => (cfg.leads.webhook = e.target.value.trim()));
+    on("ldReqEmail", "change", (e) => (cfg.leads.requireEmail = e.target.checked));
     on("pvPurge", "click", () => {
       const n = A.purgeOldLeads(cfg.privacy.retentionDays);
       const m = $("pvMsg"); if (m) m.textContent = "Purged " + n + " lead(s) past retention.";
@@ -401,6 +410,7 @@
     if ($("tierName")) $("tierName").value = cfg.tier || "";
     renderPresets(); renderFeatures(); renderBackend(); renderPerms(); renderContentEditors();
     if (window.CommerceEditor) window.CommerceEditor.mount(cfg, $("commerceRows"), { toast: toast });
+    if (window.KitEditor) window.KitEditor.mount(cfg, $("kitRows"));
   }
   function wireConfig() {
     wireContentEditors();

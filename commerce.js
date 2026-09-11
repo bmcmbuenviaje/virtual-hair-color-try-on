@@ -118,6 +118,34 @@
     });
   }
 
+  // "Add the whole kit to cart" editor — bundle URL + the staple SKUs (url + optional
+  // Shopify variant id for a combined cart permalink). Mutates cfg.kit in place.
+  function mountKit(cfg, container) {
+    if (!container) return;
+    const kit = (cfg.kit = cfg.kit || { bundleUrl: "", items: [] });
+    kit.items = kit.items || [];
+    container.innerHTML =
+      '<div class="field" style="margin-bottom:12px"><label>Whole-kit bundle URL (optional — if set, used as-is)</label>' +
+        '<input class="kit-bundle" type="text" placeholder="https://…  a bundle listing or a pre-built cart link" value="' + esc(kit.bundleUrl || "") + '" /></div>' +
+      (kit.items.length
+        ? kit.items.map((it, i) =>
+            '<div class="cm-row" data-i="' + i + '"><div class="cm-head"><span class="cm-name">' + esc(it.name || ("Item " + (i + 1))) + "</span></div>" +
+              '<div class="cm-fields">' +
+                '<input class="kit-url" type="text" placeholder="Product URL (Shopee / Lazada / Shopify)" value="' + esc(it.url || "") + '" />' +
+                '<input class="kit-var" type="text" placeholder="Shopify variant id (enables combined cart)" value="' + esc(it.variant || "") + '" />' +
+              "</div></div>"
+          ).join("")
+        : '<p class="hint" style="color:var(--muted)">No kit items configured.</p>');
+    const b = container.querySelector(".kit-bundle");
+    if (b) b.addEventListener("input", (e) => { kit.bundleUrl = e.target.value.trim(); });
+    container.querySelectorAll(".cm-row").forEach((row) => {
+      const it = kit.items[+row.dataset.i]; if (!it) return;
+      row.querySelector(".kit-url").addEventListener("input", (e) => { it.url = e.target.value.trim(); });
+      row.querySelector(".kit-var").addEventListener("input", (e) => { it.variant = e.target.value.trim(); });
+    });
+  }
+
   window.Commerce = { fetchShopify, buildBuyUrl };
   window.CommerceEditor = { mount };
+  window.KitEditor = { mount: mountKit };
 })();

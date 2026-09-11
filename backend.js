@@ -81,6 +81,37 @@
     }
     outboxSave(remain);
   }
+
+  // ---- CRM / marketing webhook (independent of PocketBase) ----
+  // POST each consented lead to a client-owned catch hook (Zapier / Make / CRM) so
+  // leads feed the client's mailing list. Fire-and-forget (no-cors → opaque), with a
+  // durable outbox retried when the device comes back online.
+  const HOOK_OUTBOX = "icolorLeadHookOutbox";
+  function hookUrl() { return (cfg().leads || {}).webhook || ""; }
+  function hookLoad() { try { return JSON.parse(localStorage.getItem(HOOK_OUTBOX) || "[]"); } catch (e) { return []; } }
+  function hookSave(a) { try { localStorage.setItem(HOOK_OUTBOX, JSON.stringify(a.slice(-1000))); } catch (e) {} }
+  function hookRecord(lead) {
+    const loc = window.Analytics ? window.Analytics.currentLocation() : { id: "", name: "" };
+    return { source: "icolor-plus", locId: loc.id, location: loc.name, email: lead.email || "", mobile: lead.mobile || "", consent: !!lead.consent, ts: lead.ts || new Date().toISOString() };
+  }
+  async function postHook(url, rec) {
+    // text/plain keeps it a "simple" request (no CORS preflight); Zapier/Make parse the JSON body.
+    await fetch(url, { method: "POST", mode: "no-cors", keepalive: true, headers: { "Content-Type": "text/plain;charset=UTF-8" }, body: JSON.stringify(rec) });
+  }
+  async function pushLeadWebhook(lead) {
+    const url = hookUrl(); if (!url) return false;
+    const rec = hookRecord(lead);
+    if (navigator.onLine === false) { const q = hookLoad(); q.push(rec); hookSave(q); return false; }
+    try { await postHook(url, rec); return true; }
+    catch (e) { const q = hookLoad(); q.push(rec); hookSave(q); return false; }
+  }
+  async function flushLeadHookOutbox() {
+    const url = hookUrl(); if (!url) return;
+    const queue = hookLoad(); if (!queue.length) return;
+    const remain = [];
+    for (const rec of queue) { try { await postHook(url, rec); } catch (e) { remain.push(rec); } }
+    hookSave(remain);
+  }
   async function fetchAllLocations() {
     if (!pb) { if (!(await init())) return null; }
     try {
@@ -156,5 +187,5 @@
     } catch (e) { return false; }
   }
 
-  window.Backend = { enabled, init, upsertLocation, pushLead, flushLeadOutbox, fetchAllLocations, fetchScans, claimVoucher, importVouchers, voucherStats, fetchConfig, pushConfig, beCfg };
+  window.Backend = { enabled, init, upsertLocation, pushLead, flushLeadOutbox, pushLeadWebhook, flushLeadHookOutbox, fetchAllLocations, fetchScans, claimVoucher, importVouchers, voucherStats, fetchConfig, pushConfig, beCfg };
 })();

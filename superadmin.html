@@ -188,6 +188,12 @@
       <div id="commerceRows"></div>
     </div>
 
+    <div class="a-card" id="sa-card-kit">
+      <h2>Kit / bundle <span class="muted">— “add the whole kit to cart” (override)</span></h2>
+      <p class="hint" style="color:var(--muted);font-size:12.5px;margin:-4px 0 12px">Adds the whole recommended kit at once (from the analysis game plan) via a QR. Set a single <b>bundle URL</b>, or link each staple + its Shopify <b>variant id</b> so they go into one cart. The colour uses its own “Shop the look” link. Active when <b>Shop the look</b> is on.</p>
+      <div id="kitRows"></div>
+    </div>
+
     <div class="a-card" id="sa-card-attract">
       <h2>Attract / idle mirror <span class="muted">— tuning</span></h2>
       <p class="hint" style="color:var(--muted);font-size:12.5px;margin:-4px 0 12px">Active when the “Attract / idle mirror” feature is on. After the idle delay with no interaction, the kiosk auto-starts a live camera teaser (needs camera permission already granted).</p>
@@ -243,6 +249,12 @@
         <div class="field" style="min-width:150px"><label>Retention (days, 0 = forever)</label><input id="pvRetention" type="number" min="0" class="num" style="width:120px" /></div>
       </div>
       <div class="field" style="margin-top:10px"><label>Consent notice (blank = sensible default)</label><input id="pvNotice" type="text" placeholder="Your details are stored only to…" /></div>
+      <div class="field" style="margin-top:10px"><label>Lead-form consent text (the tick-box label)</label><input id="ldConsent" type="text" placeholder="I agree to receive iColor Plus updates and offers…" /></div>
+      <div class="row" style="gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
+        <div class="field" style="flex:1;min-width:260px"><label>Marketing webhook URL (CRM / Zapier / Make) — optional</label><input id="ldWebhook" type="text" placeholder="https://hooks.zapier.com/…" /></div>
+        <label class="perm" style="width:max-content"><input type="checkbox" id="ldReqEmail" /> Require an email</label>
+      </div>
+      <p class="hint" style="color:var(--muted);font-size:12px;margin:6px 0 0">Each <b>consented</b> lead is POSTed to the webhook (offline-queued + retried). You own the destination and must ensure your consent text covers it (PH Data Privacy Act).</p>
       <div class="row" style="gap:10px;margin-top:12px;align-items:center">
         <button id="pvPurge" class="btn ghost">Purge leads past retention now</button>
         <span id="pvMsg" class="hint" style="color:var(--muted)"></span>

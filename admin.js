@@ -64,7 +64,9 @@
   cfg.promo = Object.assign({ enabled: false, shadeId: "", title: "Shade of the Week", message: "", image: "", popup: false, popupText: "Tap the screen, and try-on our iColor products!" }, cfg.promo || {});
   cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true, source: "generated" }, cfg.coupon || {});
   cfg.printLayout = Object.assign({ title: "Personalized Hair Colour Analysis", accentFrom: "#5f7d2e", accentTo: "#b8942f", footer: "", showBrighten: true, showMatches: true }, cfg.printLayout || {});
-  cfg.print = Object.assign({ mode: "color", transport: "bluetooth", widthMm: 58, qr: true, copies: 1, header: "", footer: "Great Lengths PH" }, cfg.print || {});
+  cfg.print = Object.assign({ mode: "color", transport: "bluetooth", widthMm: 58, qr: true, copies: 1, header: "", footer: "Great Lengths PH", paperRoll: 0 }, cfg.print || {});
+  cfg.kit = Object.assign({ bundleUrl: "", items: [] }, cfg.kit || {});
+  if (!cfg.kit.items.length) cfg.kit.items = JSON.parse(JSON.stringify((DEFAULT.kit && DEFAULT.kit.items) || []));
   cfg.commerce = Object.assign({ currency: "₱", buttonLabel: "Add to Cart", showQr: true, checkout: "product" }, cfg.commerce || {});
   if (cfg.defaultLevel == null) cfg.defaultLevel = (DEFAULT.defaultLevel != null ? DEFAULT.defaultLevel : 0);
   if (cfg.colorStrength == null) cfg.colorStrength = (DEFAULT.colorStrength != null ? DEFAULT.colorStrength : 0.22);
@@ -360,6 +362,7 @@
     renderPreview();
     renderContentEditors();
     if (window.CommerceEditor) window.CommerceEditor.mount(cfg, $("commerceRows"), { toast: toast });
+    if (window.KitEditor) window.KitEditor.mount(cfg, $("kitRows"));
     applyClientPerms();
     setupCollapsibles();
   }

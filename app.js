@@ -1547,6 +1547,33 @@ function colourGamePlan(a) {
   };
 }
 
+// "Add the whole kit to cart" — resolve one URL that carries as much of the
+// recommended kit as possible: a client bundle URL, else a combined Shopify cart
+// permalink of the SKUs that share one store, else at least the colour's page.
+const KIT_MATCH = { lighten: /lighten|bleach|crème|creme/i, purple: /purple|toning|violet/i, argan: /argan|mask|serum|treatment/i };
+function kitItemFor(name) {
+  const items = (CONFIG.kit && Array.isArray(CONFIG.kit.items)) ? CONFIG.kit.items : [];
+  const n = String(name || "").toLowerCase();
+  for (const it of items) { const re = KIT_MATCH[it.key]; if (re && re.test(n)) return it; }
+  return null;
+}
+function buildKitCart(gp) {
+  if (!FEATURES.commerce) return null;
+  const kit = CONFIG.kit || {};
+  if (kit.bundleUrl) return { url: kit.bundleUrl, kind: "bundle" };
+  const parts = [];
+  const push = (url, variant) => { if (!url || !variant) return; try { parts.push({ origin: new URL(url).origin, variant: String(variant) }); } catch (e) {} };
+  if (selectedShade && selectedShade.buyUrl) push(selectedShade.buyUrl, selectedShade.buyVariant);
+  ((gp && gp.kit) || []).forEach((k) => { const it = kitItemFor(k.name); if (it) push(it.url, it.variant); });
+  if (parts.length) {
+    const origin = parts[0].origin;
+    const same = parts.filter((p) => p.origin === origin);
+    if (same.length) return { url: origin + "/cart/" + same.map((p) => p.variant + ":1").join(","), kind: "cart", n: same.length };
+  }
+  if (selectedShade && selectedShade.buyUrl) return { url: selectedShade.buyUrl, kind: "product" };
+  return null;
+}
+
 // Draw the game-plan into a canvas rect — shared by the printed A5 + saved cards.
 function drawGamePlanPanel(c, gp, x, y, w, h, sans, o) {
   o = o || {};
@@ -1706,6 +1733,7 @@ function renderAnalysis(a) {
       <div class="an-kit"><h5>🛍️ Your iColor kit for this look</h5>
         <ul>${gp.kit.map((k) => `<li>${k.name}${k.price ? ` <span class="an-price">${k.price}</span>` : ""}</li>`).join("")}</ul>
         ${gp.offer ? `<p class="an-offer">${gp.offer}</p>` : ""}
+        ${(() => { const kc = buildKitCart(gp); if (!kc) return ""; const qr = qrSvg(kc.url, 3); return `<div class="an-kitcart"><button id="kitCartBtn" class="an-try">🛒 Add the whole kit to cart</button>${qr ? `<div class="an-kitqr"><div class="an-kitqr-img">${qr}</div><span>Scan to add it on your phone</span></div>` : ""}</div>`; })()}
       </div>
     </section>` : "";
 
@@ -1758,6 +1786,14 @@ function renderAnalysis(a) {
     fmt + detected + recs + gameplan + statement + picks + brighten + leadsSec + apply + care +
     `<p class="an-disc">This is a digital estimate from your photo and its lighting — not a professional diagnosis. Colours preview how each shade mixes with your real hair. Bleaching/lightening stresses hair — do it gradually, ideally with a professional, and always patch-test.</p>`;
 
+  const kitBtn = analysisBody.querySelector("#kitCartBtn");
+  if (kitBtn) kitBtn.addEventListener("click", () => {
+    const kc = buildKitCart(FEATURES.gameplan ? colourGamePlan(a) : null);
+    if (!kc || !kc.url) { showToast("Add product links in Admin → Kit first"); return; }
+    try { trk("shopclick", { sku: (selectedShade && selectedShade.id) || "", kit: true }); } catch (e) {}
+    window.open(kc.url, "_blank", "noopener");
+  });
+
   const leadBtn = analysisBody.querySelector("#leadSubmit");
   if (leadBtn) leadBtn.addEventListener("click", () => {
     const email = (analysisBody.querySelector("#leadEmail").value || "").trim();
@@ -1770,6 +1806,7 @@ function renderAnalysis(a) {
     const lead = { email, mobile, consent };
     try { window.Analytics && window.Analytics.addLead(lead); } catch (e) {}
     try { window.Backend && window.Backend.enabled() && window.Backend.pushLead(lead); } catch (e) {}
+    try { window.Backend && window.Backend.pushLeadWebhook && window.Backend.pushLeadWebhook(lead); } catch (e) {} // CRM webhook (independent of PocketBase)
     msg.textContent = "Thanks — you're on the list!";
     msg.className = "lead-msg ok";
     analysisBody.querySelector("#leadEmail").value = "";
@@ -3734,6 +3771,14 @@ if (FEATURES.offline && "serviceWorker" in navigator && location.protocol !== "f
 pulseHealth();
 setInterval(pulseHealth, 60000);
 document.addEventListener("visibilitychange", () => { if (!document.hidden) pulseHealth(); });
+
+// CRM lead webhook: drain any queued leads (works without PocketBase; retries online).
+if (window.Backend && window.Backend.flushLeadHookOutbox) {
+  const fh = () => { try { window.Backend.flushLeadHookOutbox(); } catch (e) {} };
+  fh();
+  window.addEventListener("online", fh);
+  setInterval(fh, 60000);
+}
 
 // Live backend (optional): mirror this location to the cloud + pull fleet config.
 if (window.Backend && window.Backend.enabled()) {

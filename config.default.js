@@ -152,10 +152,15 @@ window.ICOLOR_DEFAULT_CONFIG = {
   },
 
   // Opt-in lead capture (consent only — stored locally, exported as CSV by Super Admin).
+  //   webhook — optional. A CRM / Zapier / Make "catch hook" URL the CLIENT owns.
+  //   Each CONSENTED lead is POSTed there (offline-queued + retried) so leads flow
+  //   straight into the client's mailing list / CRM. Blank = local + CSV only. The
+  //   client is responsible for the destination and that their consent text covers it.
   leads: {
     enabled: false,
     requireEmail: true,
     consentText: "I agree to receive iColor Plus updates and offers from Great Lengths.",
+    webhook: "",
   },
 
   // Data privacy (PH Data Privacy Act). A short notice + optional policy link shown
@@ -219,6 +224,23 @@ window.ICOLOR_DEFAULT_CONFIG = {
   //               per-session voucher on the gallery (claimed once per session from
   //               the pool, or a generated code); false = the static coupon.code.
   handoff: { url: "", wifiSsid: "", wifiPass: "", label: "Send to my phone", voucher: false },
+
+  // "Add the whole kit to cart" (gated by features.commerce). The consultant game
+  // plan recommends a kit (lightening crème, purple shampoo, the iColor shade, Argan
+  // mask); this lets a guest add ALL of it at once via a QR to their phone.
+  //   bundleUrl — a single URL that already contains the whole kit (any platform —
+  //               a Shopee/Lazada "bundle" listing or a pre-built cart). If set, used as-is.
+  //   items     — the staple SKUs (besides the shade, which uses its own buyUrl/buyVariant).
+  //               For Shopify, set `variant` (numeric id) so a multi-item cart permalink
+  //               (/cart/v1:1,v2:1,…) can be built; otherwise just `url` (single-item fallback).
+  kit: {
+    bundleUrl: "",
+    items: [
+      { key: "lighten", name: "LoveColor Hair Lightening Crème", url: "", variant: "" },
+      { key: "purple", name: "LoveColor Purple Shampoo & Conditioner", url: "", variant: "" },
+      { key: "argan", name: "Argan Beauty Hair Mask & Serum", url: "", variant: "" },
+    ],
+  },
 
   // Language. codes: "en" | "tl".
   lang: { default: "en", enabled: ["en", "tl"] },
