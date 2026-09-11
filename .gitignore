@@ -12,6 +12,8 @@ assets/icolorplus-*
 # Local test artifacts (not part of the deploy)
 _*.html
 *.mp4
+*.webm
+*.mov
 
 # Compiled handoff-box binaries (built per SETUP.md; large — kept out of git)
 handoff-box/dist/
