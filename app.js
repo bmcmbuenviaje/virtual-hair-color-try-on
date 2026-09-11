@@ -335,7 +335,7 @@ const MAX_LEVEL = LEVEL_LIFT.length - 1;                 // 5 applications
 // Overall AR colour opacity (config-driven). Subtle by default so it reads as a
 // natural tint, not a painted-on coat.
 const DEPOSIT_STRENGTH = Math.max(0.05, Math.min(1,
-  parseFloat(CONFIG.colorStrength != null ? CONFIG.colorStrength : 0.22) || 0.22));
+  parseFloat(CONFIG.colorStrength != null ? CONFIG.colorStrength : 0.30) || 0.30));
 function levelLabel(i) {
   i = Math.max(0, Math.min(MAX_LEVEL, i | 0));
   if (i === 0) return t("lvl_base");
@@ -2975,18 +2975,24 @@ function scheduleColorsCollapse() {
   _colorsCollapseTimer = setTimeout(() => setColorsCollapsed(true), 1200);
 }
 {
-  const fsBtn = $("fullscreenBtn");
-  const target = $("appScreen");
-  if (fsBtn && target) {
-    fsBtn.addEventListener("click", () => {
-      if (document.fullscreenElement) { document.exitFullscreen && document.exitFullscreen(); }
-      else if (target.requestFullscreen) { target.requestFullscreen().catch(() => {}); }
-    });
-    document.addEventListener("fullscreenchange", () => {
-      fsBtn.classList.toggle("on", !!document.fullscreenElement);
-      fsBtn.setAttribute("aria-pressed", document.fullscreenElement ? "true" : "false");
-    });
+  // Fullscreen the WHOLE document (not just #appScreen) so body-level modals — the
+  // analysis, handoff and self-test dialogs — stay visible on top while fullscreen.
+  function toggleFullscreen() {
+    const el = document.documentElement;
+    if (document.fullscreenElement || document.webkitFullscreenElement) {
+      (document.exitFullscreen || document.webkitExitFullscreen || function () {}).call(document);
+    } else {
+      (el.requestFullscreen || el.webkitRequestFullscreen || function () { return Promise.reject(); }).call(el).catch(() => {});
+    }
   }
+  const fsBtns = [$("fullscreenBtn"), $("startFsBtn")].filter(Boolean);
+  fsBtns.forEach((b) => b.addEventListener("click", toggleFullscreen));
+  const syncFs = () => {
+    const on = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    fsBtns.forEach((b) => { b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false"); });
+  };
+  document.addEventListener("fullscreenchange", syncFs);
+  document.addEventListener("webkitfullscreenchange", syncFs);
   const ct = $("colorsToggle");
   if (ct) {
     const wrap = ct.closest(".dock-colors");
