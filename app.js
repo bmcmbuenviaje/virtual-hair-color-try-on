@@ -23,8 +23,8 @@ const MASK_CUTOFF = 0.15; // legacy soft cutoff (kept for reference; see maskAlp
 // that spills onto the forehead / scalp / temples — so raw confidence would tint
 // skin. maskAlpha() zeroes anything below MASK_LO (skin/scalp) and smoothsteps up
 // to full only for solid hair, so the colour never lands on the scalp.
-const MASK_LO = 0.5;  // below this = not hair → no colour at all
-const MASK_HI = 0.86; // at/above this = solid hair → full colour (soft feather between)
+const MASK_LO = 0.55; // below this = not hair (skin/scalp/parting) → no colour
+const MASK_HI = 0.9;  // at/above this = solid hair → full colour (soft feather between)
 function maskAlpha(m) {
   if (m <= MASK_LO) return 0;
   if (m >= MASK_HI) return 1;
@@ -453,14 +453,58 @@ async function initSegmenter(delegate = "GPU") {
 
 // Run segmentation on a source (video/canvas) and store a private copy of the
 // hair mask. The copy matters: closing the result can free the underlying buffer.
+// ---- Mask post-processing (reused buffers) ----
+// Temporal EMA (kills frame-to-frame flicker) → erode (pulls the mask OFF the
+// skin: hairline, temples, and the scalp showing through a parting) → box blur
+// (smooth, anti-aliased edges). This runs on the small model mask (~256²), cheap.
+let _mPrev = null, _mA = null, _mB = null, _mN = 0;
+function ensureMaskBufs(n) {
+  if (_mN === n) return;
+  _mPrev = new Float32Array(n); _mA = new Float32Array(n); _mB = new Float32Array(n); _mN = n;
+}
+function erode3(src, dst, w, h) {
+  for (let y = 0; y < h; y++) {
+    const r0 = (y > 0 ? y - 1 : 0) * w, r1 = y * w, r2 = (y < h - 1 ? y + 1 : h - 1) * w;
+    for (let x = 0; x < w; x++) {
+      const x0 = x > 0 ? x - 1 : 0, x1 = x, x2 = x < w - 1 ? x + 1 : w - 1;
+      let m = src[r0 + x0];
+      let v = src[r0 + x1]; if (v < m) m = v; v = src[r0 + x2]; if (v < m) m = v;
+      v = src[r1 + x0]; if (v < m) m = v; v = src[r1 + x1]; if (v < m) m = v; v = src[r1 + x2]; if (v < m) m = v;
+      v = src[r2 + x0]; if (v < m) m = v; v = src[r2 + x1]; if (v < m) m = v; v = src[r2 + x2]; if (v < m) m = v;
+      dst[r1 + x] = m;
+    }
+  }
+}
+function boxBlur3(src, dst, w, h) {
+  for (let y = 0; y < h; y++) {
+    const r0 = (y > 0 ? y - 1 : 0) * w, r1 = y * w, r2 = (y < h - 1 ? y + 1 : h - 1) * w;
+    for (let x = 0; x < w; x++) {
+      const x0 = x > 0 ? x - 1 : 0, x1 = x, x2 = x < w - 1 ? x + 1 : w - 1;
+      dst[r1 + x] = (
+        src[r0 + x0] + src[r0 + x1] + src[r0 + x2] +
+        src[r1 + x0] + src[r1 + x1] + src[r1 + x2] +
+        src[r2 + x0] + src[r2 + x1] + src[r2 + x2]) / 9;
+    }
+  }
+}
+function processMask(raw, w, h) {
+  const n = w * h;
+  ensureMaskBufs(n);
+  const a = 0.55; // weight of the current frame in the temporal average
+  for (let i = 0; i < n; i++) { const v = _mPrev[i] * (1 - a) + raw[i] * a; _mA[i] = v; _mPrev[i] = v; }
+  erode3(_mA, _mB, w, h);   // shrink off skin / scalp / parting
+  boxBlur3(_mB, _mA, w, h); // then soften the edge
+  return _mA;
+}
+
 function segmentSource(src) {
   const result = segmenter.segmentForVideo(src, performance.now());
   const masks = result && result.confidenceMasks;
   if (masks && masks.length) {
     const hair = masks[masks.length > 1 ? 1 : 0];
-    maskData = new Float32Array(hair.getAsFloat32Array());
     maskW = hair.width;
     maskH = hair.height;
+    maskData = processMask(hair.getAsFloat32Array(), maskW, maskH);
   }
   result && result.close && result.close();
 }
