@@ -1,5 +1,5 @@
 /* iColor Plus — service worker (offline kiosk cache) */
-const CACHE = "icolor-v9";
+const CACHE = "icolor-v10";
 const SHELL = [
   "./", "index.html", "app.js", "analytics.js", "backend.js", "config.default.js",
   "config.local.js", "commerce.js", "styles.css", "manifest.webmanifest", "assets/logo.svg",

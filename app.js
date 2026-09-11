@@ -1305,9 +1305,22 @@ function aftercareTips(top) {
   return t;
 }
 
+function stripTags(s) { return String(s).replace(/<[^>]*>/g, ""); }
+function shadeFamily(name) {
+  const n = (name || "").toLowerCase();
+  if (/red|cherry|burgundy|copper|mahogany|wine/.test(n)) return "red";
+  if (/pink|purple|blue|pastel/.test(n)) return "pastel";
+  if (/ash|silver|grey|gray/.test(n)) return "ash";
+  if (/nude|beige/.test(n)) return "nude";
+  if (/blonde|vanilla/.test(n)) return "blonde";
+  return "natural";
+}
+
 // Consultant-style, product-led "how to get the colour you want." Built around the
-// shade being tried (selectedShade), falling back to the top recommendation. Upsells
-// the iColor / LoveColor / Argan Beauty line and spells out lightening when needed.
+// shade being tried (selectedShade), falling back to the top recommendation. Copy is
+// tailored per shade family; upsells the iColor / LoveColor / Argan Beauty line, adds
+// the SKU price + the backend promo/coupon as an offer. Returns HTML + plain variants
+// (the printed/saved cards draw plain text on canvas).
 function colourGamePlan(a) {
   let target = (selectedShade && selectedShade.hex && selectedShade.id !== "none")
     ? selectedShade
@@ -1317,32 +1330,108 @@ function colourGamePlan(a) {
   const hairLevel = a.level.level;
   const apps = Math.max(0, targetLevel - hairLevel); // ≈ one LoveColor application per level
   const name = target.name;
-  const baseName = a.level.name.replace(/^Level \d+ · /, "");
-  const cool = target.tone === "cool" || /ash|nude|blonde|silver|grey|gray|pink|purple|blue|pastel/i.test(name);
-  const red = /red|cherry|burgundy|copper|mahogany|wine/i.test(name);
+  const baseName = a.level.name.replace(/^Level \d+ · /, "").toLowerCase();
+  const cur = (CONFIG.commerce || {}).currency || "₱";
+  const fam = shadeFamily(name);
+  const cool = fam === "pastel" || fam === "ash" || fam === "blonde" || target.tone === "cool";
+  const red = fam === "red";
   const steps = [], kit = [];
 
-  const headline = apps > 0
-    ? `Ooh, gorgeous choice — <b>${name}</b> is so worth it. It sits lighter than your ${baseName.toLowerCase()}, so here's exactly how I'd get you there, step by step:`
-    : `Love it — <b>${name}</b> will look amazing on you, and it's a <b>direct colour</b> (no lightening needed). Here's how to nail a salon-grade result at home:`;
+  const FAM = {
+    red:     { emoji: "🍒", hook: "rich, glossy reds are having a major moment" },
+    pastel:  { emoji: "💗", hook: "pastels are pure main-character energy" },
+    ash:     { emoji: "🧊", hook: "cool ash tones look so expensive" },
+    nude:    { emoji: "🤎", hook: "soft nude tones read effortless and pricey" },
+    blonde:  { emoji: "🌟", hook: "going blonde is bold and so worth it" },
+    natural: { emoji: "✨", hook: "a timeless, everyday-gorgeous choice" },
+  };
+  const f = FAM[fam] || FAM.natural;
+  const headline = `${f.emoji} <b>${name}</b> — ${f.hook}. ` + (apps > 0
+    ? `It sits lighter than your ${baseName}, so here's exactly how we get you there:`
+    : `And it's a <b>direct colour</b> — no lightening needed. Here's how to nail a salon finish:`);
 
   if (apps > 0) {
-    steps.push(`<b>Lighten the base with LoveColor Hair Lightening Crème.</b> Each 35-minute application lifts about one level — from your Level ${hairLevel}, plan on about <b>${apps} application${apps > 1 ? "s" : ""}</b> to reach <b>Level ${targetLevel}</b>. Rest hair 30 minutes between rounds — do them same-day, or space over a couple of weeks to keep hair healthy.`);
-    kit.push("LoveColor Hair Lightening Crème");
+    steps.push(`<b>Lighten the base with LoveColor Hair Lightening Crème.</b> Each 35-minute application lifts about one level — from your Level ${hairLevel}, plan on about <b>${apps} application${apps > 1 ? "s" : ""}</b> to reach <b>Level ${targetLevel}</b>. Rest 30 minutes between rounds (same-day, or spaced over weeks to keep hair healthy).`);
+    kit.push({ name: "LoveColor Hair Lightening Crème", price: "" });
     if (targetLevel >= 9) {
-      steps.push(`Once you're blonde, keep it bright and brass-free with <b>LoveColor Purple Shampoo &amp; Conditioner</b> — it's what makes an ash or pastel really pay off.`);
-      kit.push("LoveColor Purple Shampoo & Conditioner");
+      steps.push(`Keep the blonde bright and brass-free with <b>LoveColor Purple Shampoo &amp; Conditioner</b> — it's what makes an ash or pastel really pay off.`);
+      kit.push({ name: "LoveColor Purple Shampoo & Conditioner", price: "" });
     }
   }
-  steps.push(`<b>Colour with iColor Plus ${name} Shampoo-In.</b> On ${apps > 0 ? "the lightened, towel-dried base" : "clean, dry hair"}, massage in for 5 minutes, leave <b>30–45 minutes</b> for a full, even deposit, then rinse cool. One application lays the colour down beautifully.`);
-  kit.push(`iColor Plus ${name}`);
-  if (cool) steps.push(`Cool &amp; ash tones grab fast — check every few minutes so it tones rather than over-deposits, and keep a purple toning wash in your routine.`);
+  steps.push(`<b>Colour with iColor Plus ${name} Shampoo-In.</b> On ${apps > 0 ? "the lightened, towel-dried base" : "clean, dry hair"}, massage in 5 minutes, leave <b>30–45 minutes</b> for a full, even deposit, then rinse cool.`);
+  kit.push({ name: `iColor Plus ${name}`, price: target.buyPrice ? cur + target.buyPrice : "" });
   if (red) steps.push(`Reds are vivid but fade first — a quick <b>${name}</b> refresh every couple of weeks keeps it juicy.`);
-  steps.push(`<b>Seal &amp; nourish with the Argan Beauty Hair Mask &amp; Serum.</b> Colour-treated hair drinks it up — 5 minutes of mask, then a few drops of serum for that glassy, salon shine.`);
-  kit.push("Argan Beauty Hair Mask & Serum");
-  steps.push(`<b>Keep it gorgeous:</b> refresh <b>${name}</b> every 4–6 weeks with the shampoo-in shade (it tops up tone every wash), wash cool and less often, and always patch-test first. 💛`);
+  else if (cool) steps.push(`Cool &amp; ash tones grab fast — check every few minutes and keep a purple toning wash in rotation so it never turns brassy.`);
+  else if (fam === "nude") steps.push(`Nudes look best kept soft — a weekly toning wash stops any warm/yellow from creeping in.`);
+  steps.push(`<b>Seal &amp; nourish with the Argan Beauty Hair Mask &amp; Serum.</b> 5 minutes of mask, then a few drops of serum for that glassy, salon shine.`);
+  kit.push({ name: "Argan Beauty Hair Mask & Serum", price: "" });
+  steps.push(`<b>Keep it gorgeous:</b> refresh <b>${name}</b> every 4–6 weeks, wash cool and less often, and always patch-test first. 💛`);
 
-  return { headline, steps, kit, apps, targetLevel };
+  // Offer line from whatever the client set in the backend admin (coupon first, else promo).
+  let offer = null;
+  const cp = CONFIG.coupon || {};
+  if (FEATURES.coupon && cp.enabled && (cp.code || cp.label)) {
+    offer = "🎁 " + (cp.label || "Special offer") + (cp.code ? " — code " + cp.code : "");
+  } else if (FEATURES.promo && (CONFIG.promo || {}).enabled) {
+    const ap = activePromo();
+    if (ap && (ap.title || ap.message)) offer = "✨ " + [ap.title, ap.message].filter(Boolean).join(" — ");
+  }
+
+  const summary = apps > 0
+    ? `Lighten ~${apps}× to Level ${targetLevel} → colour with ${name} → nourish with Argan Beauty.`
+    : `Colour with ${name} → nourish with Argan Beauty → refresh every 4–6 weeks.`;
+
+  return {
+    family: fam, apps, targetLevel, shadeName: name,
+    headline, headlinePlain: stripTags(headline),
+    steps, stepsPlain: steps.map(stripTags),
+    kit, kitNames: kit.map((k) => k.name), offer, summary,
+  };
+}
+
+// Draw the game-plan into a canvas rect — shared by the printed A5 + saved cards.
+function drawGamePlanPanel(c, gp, x, y, w, h, sans, o) {
+  o = o || {};
+  const accent = o.accent || "#5f7d2e";
+  const pad = o.pad || 30;
+  const titleSize = o.titleSize || 28, headSize = o.headSize || 22, stepSize = o.stepSize || 20;
+  c.fillStyle = "#f2f5ea";
+  roundRect(c, x, y, w, h, 18); c.fill();
+  // pill (top-right)
+  const pill = gp.apps > 0 ? "NEEDS LIGHTENING" : "DIRECT COLOUR";
+  c.font = "700 15px " + sans;
+  const pw = c.measureText(pill).width + 26;
+  c.fillStyle = gp.apps > 0 ? "#b8942f" : "#5f7d2e";
+  roundRect(c, x + w - pad - pw, y + pad - 4, pw, 30, 15); c.fill();
+  c.fillStyle = "#fff"; c.textAlign = "center"; c.textBaseline = "middle";
+  c.fillText(pill, x + w - pad - pw / 2, y + pad + 11);
+  c.textAlign = "left"; c.textBaseline = "alphabetic";
+  // title
+  c.fillStyle = accent; c.font = "700 " + titleSize + "px " + sans;
+  let ty = y + pad + titleSize;
+  fitLeft(c, "HOW TO GET " + gp.shadeName.toUpperCase(), x + pad, ty, w - pad * 2 - pw - 16);
+  ty += headSize + 10;
+  const offerH = gp.offer ? stepSize + 8 : 0;
+  const kitY = y + h - pad - offerH - stepSize;
+  if (o.compact) {
+    // Tight panels: the title already names the shade, so show the actionable summary.
+    c.fillStyle = "#3a3a3a"; c.font = "400 " + stepSize + "px " + sans;
+    fitLeft(c, gp.summary, x + pad, ty, w - pad * 2);
+  } else {
+    c.fillStyle = "#1a1a1a"; c.font = "600 " + headSize + "px " + sans;
+    ty = wrapText(c, gp.headlinePlain, x + pad, ty, w - pad * 2, headSize + 8, 2) + 8;
+    c.fillStyle = "#3a3a3a"; c.font = "400 " + stepSize + "px " + sans;
+    const maxY = kitY - 2 * (stepSize + 7) - 4; // leave room for a full 2-line step above the kit line
+    const maxSteps = o.maxSteps || 4;
+    for (let i = 0; i < Math.min(maxSteps, gp.stepsPlain.length); i++) {
+      if (ty > maxY) break;
+      ty = wrapText(c, "•  " + gp.stepsPlain[i], x + pad, ty, w - pad * 2, stepSize + 7, 2) + 6;
+    }
+  }
+  // kit + offer pinned to the bottom
+  c.fillStyle = accent; c.font = "700 " + stepSize + "px " + sans;
+  fitLeft(c, "🛍  Kit: " + gp.kitNames.join(" · "), x + pad, kitY, w - pad * 2);
+  if (gp.offer) { c.fillStyle = "#b8942f"; c.font = "700 " + stepSize + "px " + sans; fitLeft(c, gp.offer, x + pad, y + h - pad, w - pad * 2); }
 }
 
 let lastAnalysis = null;
@@ -1450,13 +1539,16 @@ function renderAnalysis(a) {
       <ul class="an-care">${a.brightening.tips.map((s) => `<li>${s}</li>`).join("")}</ul>
     </section>`;
 
-  const gp = colourGamePlan(a);
+  const gp = FEATURES.gameplan ? colourGamePlan(a) : null;
   const gameplan = gp ? `
     <section class="an-plan">
       <h3>How to get your colour ${gp.apps > 0 ? `<span class="an-badge lift">Needs lightening</span>` : `<span class="an-badge ok">Direct colour</span>`}</h3>
       <p class="an-lead">${gp.headline}</p>
       <ol class="an-steps an-plan-steps">${gp.steps.map((s) => `<li>${s}</li>`).join("")}</ol>
-      <div class="an-kit"><h5>🛍️ Your iColor kit for this look</h5><ul>${gp.kit.map((k) => `<li>${k}</li>`).join("")}</ul></div>
+      <div class="an-kit"><h5>🛍️ Your iColor kit for this look</h5>
+        <ul>${gp.kit.map((k) => `<li>${k.name}${k.price ? ` <span class="an-price">${k.price}</span>` : ""}</li>`).join("")}</ul>
+        ${gp.offer ? `<p class="an-offer">${gp.offer}</p>` : ""}
+      </div>
     </section>` : "";
 
   const apply = `
@@ -1797,23 +1889,29 @@ async function buildLandscapeCard(a) {
   c.font = "italic 24px " + sans;
   c.fillText("Previewing: " + selectedShade.name, bx, by - 6);
 
-  // Brighten panel (right of hero)
-  if (PL.showBrighten !== false) {
+  // Right-of-hero panel: the "How to get your colour" game plan (paid feature),
+  // else the brighten tips.
+  {
     const gx = 980, gy = 195, gw = W - gx - 60, gh = 420;
-    c.fillStyle = "#f2f5ea";
-    roundRect(c, gx, gy, gw, gh, 18);
-    c.fill();
-    c.fillStyle = PL.accentFrom || "#5f7d2e";
-    c.font = "700 30px " + sans;
-    c.fillText("MAKE IT BRIGHTER / LIVELIER", gx + 30, gy + 52);
-    c.fillStyle = "#1a1a1a";
-    c.font = "600 26px " + sans;
-    let ty = wrapText(c, a.brightening.headline, gx + 30, gy + 100, gw - 60, 36, 3);
-    c.fillStyle = "#4a4a4a";
-    c.font = "400 23px " + sans;
-    ty += 10;
-    for (const tip of a.brightening.tips.slice(0, 2)) {
-      ty = wrapText(c, "•  " + tip, gx + 30, ty, gw - 60, 31, 3) + 8;
+    const gp = FEATURES.gameplan ? colourGamePlan(a) : null;
+    if (gp) {
+      drawGamePlanPanel(c, gp, gx, gy, gw, gh, sans, { accent: PL.accentFrom || "#5f7d2e", pad: 34, titleSize: 30, headSize: 26, stepSize: 22, maxSteps: 4 });
+    } else if (PL.showBrighten !== false) {
+      c.fillStyle = "#f2f5ea";
+      roundRect(c, gx, gy, gw, gh, 18);
+      c.fill();
+      c.fillStyle = PL.accentFrom || "#5f7d2e";
+      c.font = "700 30px " + sans;
+      c.fillText("MAKE IT BRIGHTER / LIVELIER", gx + 30, gy + 52);
+      c.fillStyle = "#1a1a1a";
+      c.font = "600 26px " + sans;
+      let ty = wrapText(c, a.brightening.headline, gx + 30, gy + 100, gw - 60, 36, 3);
+      c.fillStyle = "#4a4a4a";
+      c.font = "400 23px " + sans;
+      ty += 10;
+      for (const tip of a.brightening.tips.slice(0, 2)) {
+        ty = wrapText(c, "•  " + tip, gx + 30, ty, gw - 60, 31, 3) + 8;
+      }
     }
   }
 
@@ -1996,12 +2094,21 @@ async function buildSquareCard(a) {
   c.fillStyle = "#333";
   c.font = "italic 18px " + sans;
   c.fillText("Previewing: " + selectedShade.name, bx, by - 8);
-  c.fillStyle = "#5f7d2e";
-  c.font = "700 18px " + sans;
-  c.fillText("GO BRIGHTER", bx, by + 24);
-  c.fillStyle = "#444";
-  c.font = "400 17px " + sans;
-  wrapText(c, a.brightening.headline, bx, by + 50, W - bx - 32, 24, 3);
+  const gpS = FEATURES.gameplan ? colourGamePlan(a) : null;
+  if (gpS) {
+    c.fillStyle = "#5f7d2e"; c.font = "700 18px " + sans;
+    c.fillText(gpS.apps > 0 ? "HOW TO GET IT · lighten first" : "HOW TO GET IT · direct colour", bx, by + 24);
+    c.fillStyle = "#444"; c.font = "400 17px " + sans;
+    let ty2 = wrapText(c, gpS.summary, bx, by + 50, W - bx - 32, 24, 2);
+    c.fillStyle = "#5f7d2e"; c.font = "700 15px " + sans;
+    fitLeft(c, "🛍 Kit: " + gpS.kitNames.join(" · "), bx, ty2 + 6, W - bx - 32);
+    if (gpS.offer) { c.fillStyle = "#b8942f"; c.font = "700 15px " + sans; fitLeft(c, gpS.offer, bx, ty2 + 30, W - bx - 32); }
+  } else {
+    c.fillStyle = "#5f7d2e"; c.font = "700 18px " + sans;
+    c.fillText("GO BRIGHTER", bx, by + 24);
+    c.fillStyle = "#444"; c.font = "400 17px " + sans;
+    wrapText(c, a.brightening.headline, bx, by + 50, W - bx - 32, 24, 3);
+  }
 
   // Shade strip: 3 matches + 2 bold
   c.fillStyle = "#5f7d2e";
@@ -2147,20 +2254,27 @@ async function buildPortraitCard(a) {
   c.font = "italic 19px " + sans;
   c.fillText("Previewing: " + selectedShade.name, bx, by - 10);
 
-  // Brighten panel (full width)
-  const gy = 675, gh = 185;
-  c.fillStyle = "#f2f5ea";
-  roundRect(c, 40, gy, W - 80, gh, 16);
-  c.fill();
-  c.fillStyle = "#5f7d2e";
-  c.font = "700 24px " + sans;
-  c.fillText("MAKE IT BRIGHTER / LIVELIER", 70, gy + 42);
-  c.fillStyle = "#1a1a1a";
-  c.font = "600 21px " + sans;
-  let ty = wrapText(c, a.brightening.headline, 70, gy + 80, W - 140, 30, 2);
-  c.fillStyle = "#4a4a4a";
-  c.font = "400 19px " + sans;
-  wrapText(c, "•  " + a.brightening.tips[0], 70, ty + 6, W - 140, 27, 2);
+  // Full-width panel: the "How to get your colour" game plan (compact), else brighten.
+  {
+    const gy = 675, gh = 185;
+    const gp = FEATURES.gameplan ? colourGamePlan(a) : null;
+    if (gp) {
+      drawGamePlanPanel(c, gp, 40, gy, W - 80, gh, sans, { accent: "#5f7d2e", pad: 26, titleSize: 24, headSize: 20, stepSize: 18, compact: true });
+    } else {
+      c.fillStyle = "#f2f5ea";
+      roundRect(c, 40, gy, W - 80, gh, 16);
+      c.fill();
+      c.fillStyle = "#5f7d2e";
+      c.font = "700 24px " + sans;
+      c.fillText("MAKE IT BRIGHTER / LIVELIER", 70, gy + 42);
+      c.fillStyle = "#1a1a1a";
+      c.font = "600 21px " + sans;
+      let ty = wrapText(c, a.brightening.headline, 70, gy + 80, W - 140, 30, 2);
+      c.fillStyle = "#4a4a4a";
+      c.font = "400 19px " + sans;
+      wrapText(c, "•  " + a.brightening.tips[0], 70, ty + 6, W - 140, 27, 2);
+    }
+  }
 
   // Shade strip
   c.fillStyle = "#5f7d2e";

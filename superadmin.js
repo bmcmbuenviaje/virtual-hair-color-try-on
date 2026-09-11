@@ -48,6 +48,7 @@
     { title: "Analysis & advice", items: [
       ["analysis", "Hair & skin analysis", "Undertone + recommendations"],
       ["statement", "Statement colours", "Bold shade suggestions"],
+      ["gameplan", "Colour game plan", "Consultant how-to + product kit (analysis & card)"],
       ["vibe", "Vibe filter", "Natural / bold / low-maintenance"],
       ["ratePicks", "Rate your picks", "Score the chosen shades"],
     ] },

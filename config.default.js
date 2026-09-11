@@ -59,6 +59,7 @@ window.ICOLOR_DEFAULT_CONFIG = {
     brighten: true,    // brighten (pre-lightened) toggle
     analysis: true,    // hair & skin analysis + recommendations
     statement: true,   // statement/bold colour section (within analysis)
+    gameplan: true,    // "how to get your colour" consultant plan + product kit (analysis & card)
     vibe: true,        // vibe filter (natural/bold/low-maintenance)
     ratePicks: true,   // rate-your-own-picks evaluator
     cards: true,       // save/share social cards
