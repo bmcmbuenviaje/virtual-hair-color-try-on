@@ -154,6 +154,7 @@ const I18N = {
     ho_nudge: "📱 Tap “Send to my phone” to take your photos home.",
     lvl_base: "Your hair (dark)", lvl_app_one: "After 1 app · Level {L}", lvl_app_n: "After {n} apps · Level {L}",
     lvl_hint: "💡 {name} shows best on lighter hair — slide right to preview it. To get it for real, lighten first (see “How to get your colour” in your analysis).",
+    voice_welcome: "Welcome! Pick a colour to see it on your hair.", voice_result: "Here is your personalized colour analysis.",
     langName: "EN",
   },
   tl: {
@@ -174,7 +175,30 @@ const I18N = {
     ho_nudge: "📱 I-tap ang “Ipadala sa telepono ko” para maiuwi ang mga larawan.",
     lvl_base: "Buhok mo (madilim)", lvl_app_one: "Pagkatapos ng 1 app · Level {L}", lvl_app_n: "Pagkatapos ng {n} apps · Level {L}",
     lvl_hint: "💡 Mas maganda ang {name} sa mas maliwanag na buhok — i-slide pakanan para makita. Para makuha talaga, mag-lighten muna (tingnan ang “How to get your colour” sa analysis).",
+    voice_welcome: "Maligayang pagdating! Pumili ng kulay para makita sa iyong buhok.", voice_result: "Narito ang iyong personalized na hair colour analysis.",
     langName: "TL",
+  },
+  // Cebuano / Bisaya — machine-assisted; please have a native speaker review before a big rollout.
+  ceb: {
+    tagline: "Live nga Try-On sa Kolor sa Buhok", startCamera: "Sugdi ang Camera", upload: "Mag-upload og selfie",
+    getlook: "Pangitaa ang shade gikan sa litrato", lookTitle: "Pangitaa ang shade",
+    fineprint: "Mas maayo ang camera sa hayag nga suga (kinahanglan og HTTPS). Ang pag-upload mo-analisa sa tinuod nga kolor sa imong buhok ug ipakita kung unsaon pagsagol sa matag shade.",
+    lead: "Tan-awa ang mga iColor Plus shade sa imong kaugalingong buhok nga live. Pagpili og kolor, dayon pagkuha og litrato o 30-segundos nga video — direkta nga ma-save sa imong device. Walay gi-upload.",
+    theLook: "Ang hitsura", detectedColour: "Nakit-an nga kolor sa buhok", closest: "Pinakaduol nga iColor Plus", topMatches: "Nag-unang tugma", bestMatch: "Pinakatugma", tryIt: "Sulayi",
+    pickImage: "Palihug pagpili og litrato", analyzingLook: "Gi-analisa ang hitsura…", noHairLook: "Wala mabasa ang buhok sa litrato — sulayi ang mas klaro", lookFailed: "Dili ma-analisa ang litrato",
+    ho_title: "Kuhaa ang imong mga litrato", ho_lead: "Kuhaa ang mga litrato sa imong telepono 📱",
+    ho_join: "Sumpay sa Wi-Fi", ho_join_sub: "I-scan aron mo-konektar — walay password nga i-type",
+    ho_scan: "I-scan para sa imong mga litrato", ho_scan_sub: "Mo-abli og pahina nga naay Save nga mga buton",
+    ho_code: "Code", ho_foot: "Ang imong mga litrato naa lang sa on-site box ug awtomatik nga mapapas sa kataposan sa adlaw.",
+    ho_prep: "Giandam ang imong mga litrato…", ho_err_title: "Dili maabot ang photo box.",
+    ho_err_sub: "Siguroha nga konektado kining display sa on-site Wi-Fi box, dayon sulayi pag-usab.",
+    ho_retry: "Sulayi pag-usab", ho_send: "Ipadala sa akong telepono", ho_tophone: "Sa telepono", beforeafter: "Antes/Human",
+    ho_not_setup: "Wala pa ma-setup ang pagbalhin sa litrato dinhi.", ho_take_first: "Pagkuha usa og litrato o video.",
+    ho_nudge: "📱 I-tap ang “Ipadala sa akong telepono” aron madala ang imong mga litrato.",
+    lvl_base: "Imong buhok (itom)", lvl_app_one: "Human sa 1 ka aplikasyon · Level {L}", lvl_app_n: "Human sa {n} ka aplikasyon · Level {L}",
+    lvl_hint: "💡 Mas nindot ang {name} sa mas hayag nga buhok — i-slide sa tuo aron makita. Aron makuha gyud, i-lighten una (tan-awa ang “How to get your colour” sa imong analysis).",
+    voice_welcome: "Maayong pag-abot! Pagpili og kolor aron makita sa imong buhok.", voice_result: "Ania ang imong personalized nga hair colour analysis.",
+    langName: "CEB",
   },
 };
 let LANG = "en";
@@ -183,6 +207,36 @@ if (!I18N[LANG]) LANG = "en";
 function t(k) { return (I18N[LANG] && I18N[LANG][k]) || I18N.en[k] || k; }
 function applyI18n() {
   document.querySelectorAll("[data-i18n]").forEach((el) => { const s = t(el.getAttribute("data-i18n")); if (s) el.textContent = s; });
+}
+// Spoken prompts (accessibility). Off unless features.voice; uses the device's own
+// speech synthesis (offline on most kiosks). Maps our language to a BCP-47 voice.
+const VOICE_LANG = { en: "en-US", tl: "fil-PH", ceb: "fil-PH" };
+let _voiceWarmed = false;
+function speak(text) {
+  if (!FEATURES.voice || !text) return;
+  try {
+    const synth = window.speechSynthesis; if (!synth) return;
+    if (!_voiceWarmed) { try { synth.getVoices(); } catch (e) {} _voiceWarmed = true; }
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(String(text));
+    u.lang = VOICE_LANG[LANG] || "en-US";
+    u.rate = 1; u.pitch = 1; u.volume = 1;
+    const v = (synth.getVoices() || []).find((x) => x.lang && x.lang.toLowerCase().startsWith((u.lang).slice(0, 2)));
+    if (v) u.voice = v;
+    synth.speak(u);
+  } catch (e) {}
+}
+
+// Languages this deployment offers (config-driven, filtered to ones we actually ship).
+function enabledLangs() {
+  let list = (CONFIG.lang && Array.isArray(CONFIG.lang.enabled) && CONFIG.lang.enabled.length) ? CONFIG.lang.enabled.slice() : ["en"];
+  list = list.filter((c) => I18N[c]);
+  return list.length ? list : ["en"];
+}
+function cycleLang() {
+  const list = enabledLangs();
+  const i = list.indexOf(LANG);
+  setLang(list[(i + 1) % list.length]);
 }
 function setLang(code) {
   LANG = I18N[code] ? code : "en";
@@ -1669,6 +1723,7 @@ function openAnalysis(auto) {
   trk("analysis", { undertone: a.under, hairLevel: a.level.level });
   renderAnalysis(a);
   analysisModal.classList.remove("hidden");
+  speak(t("voice_result"));
 }
 
 function renderAnalysis(a) {
@@ -3716,7 +3771,7 @@ cameraBtn.addEventListener("click", goLive);
 lookBtn.addEventListener("click", () => lookFile.click());
 lookFile.addEventListener("change", (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) handleLookFile(f); });
 $("closeLook").addEventListener("click", () => lookModal.classList.add("hidden"));
-{ const lb = $("langBtn"); if (lb) lb.addEventListener("click", () => setLang(LANG === "en" ? "tl" : "en")); }
+{ const lb = $("langBtn"); if (lb) lb.addEventListener("click", cycleLang); }
 
 startBtn.addEventListener("click", async () => {
   startBtn.disabled = true;
@@ -3735,6 +3790,7 @@ startBtn.addEventListener("click", async () => {
     loader.classList.add("hidden");
     running = true;
     renderLoop();
+    speak(t("voice_welcome"));
     trk("sessions");
     startCamGuide();
     if (pendingPromoShade) {
@@ -3848,9 +3904,10 @@ function applyFeatureGating() {
   if (!FEATURES.print) hideEl($("printBtn"));
   if (FEATURES.getlook) lookBtn.classList.remove("hidden"); else hideEl(lookBtn);
   const lb = $("langBtn");
-  if (lb) { if (FEATURES.multilang) lb.classList.remove("hidden"); else hideEl(lb); }
+  if (lb) { if (FEATURES.multilang && enabledLangs().length > 1) lb.classList.remove("hidden"); else hideEl(lb); }
 }
 applyFeatureGating();
+document.body.classList.toggle("kiosk-lg", !!FEATURES.bigtap); // large-tap kiosk theme
 applyI18n();
 setLang(LANG);
 

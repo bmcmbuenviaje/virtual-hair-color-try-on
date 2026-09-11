@@ -52,7 +52,9 @@
       ["getlook", "Get this look", "Match a shade from a photo"],
       ["camguide", "Camera guidance", "Face-fit + lighting help"],
       ["attract", "Attract mode", "Idle camera-mirror teaser"],
-      ["multilang", "Tagalog / English", "Language toggle"],
+      ["multilang", "Language toggle", "English / Tagalog / Cebuano"],
+      ["bigtap", "Large-tap theme", "Bigger buttons & text for kiosks"],
+      ["voice", "Voice prompts", "Spoken welcome + result"],
       ["offline", "Offline mode", "Works without internet"],
     ] },
     { title: "Analysis & advice", items: [

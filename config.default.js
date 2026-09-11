@@ -83,6 +83,8 @@ window.ICOLOR_DEFAULT_CONFIG = {
     camguide: true,    // camera fit guidance (positioning oval + low-light hint)
     handoff: false,    // "send to my phone" — offline transfer of captures to a guest's phone via an on-site box
     twotone: false,    // OPT-IN dip-dye preview: gentle darker roots → lighter ends (off = the natural, even colour)
+    bigtap: false,     // large-tap kiosk theme — bigger buttons/text for standing-height touchscreens
+    voice: false,      // spoken prompts (welcome + result) via the device's speech synthesis
   },
 
   // Shade-of-the-week promo banner (Super Admin sets; shows on the start screen).
@@ -243,8 +245,9 @@ window.ICOLOR_DEFAULT_CONFIG = {
     ],
   },
 
-  // Language. codes: "en" | "tl".
-  lang: { default: "en", enabled: ["en", "tl"] },
+  // Language. codes: "en" | "tl" | "ceb" (Cebuano/Bisaya). The in-app button cycles
+  // through `enabled`. (Cebuano strings are machine-assisted — review before rollout.)
+  lang: { default: "en", enabled: ["en", "tl", "ceb"] },
 
   // The full colour catalog. `hidden: true` keeps a shade out of the app
   // without deleting it. Order here is the order shown in the app.
