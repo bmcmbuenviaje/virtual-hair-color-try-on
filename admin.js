@@ -66,12 +66,18 @@
   cfg.printLayout = Object.assign({ title: "Personalized Hair Colour Analysis", accentFrom: "#5f7d2e", accentTo: "#b8942f", footer: "", showBrighten: true, showMatches: true }, cfg.printLayout || {});
   cfg.commerce = Object.assign({ currency: "₱", buttonLabel: "Add to Cart", showQr: true, checkout: "product" }, cfg.commerce || {});
   if (cfg.defaultLevel == null) cfg.defaultLevel = (DEFAULT.defaultLevel != null ? DEFAULT.defaultLevel : 0);
+  if (cfg.colorStrength == null) cfg.colorStrength = (DEFAULT.colorStrength != null ? DEFAULT.colorStrength : 0.22);
   const levelText = (i) => (i <= 0 ? "Your hair (dark)" : "After " + i + (i === 1 ? " app" : " apps") + " · Level " + (5 + i));
 
   function renderContentEditors() {
     if ($("defIntensity")) {
       $("defIntensity").value = cfg.defaultLevel;
       if ($("defIntensityVal")) $("defIntensityVal").textContent = levelText(cfg.defaultLevel);
+    }
+    if ($("colorStrength")) {
+      const p = Math.round((cfg.colorStrength || 0.22) * 100);
+      $("colorStrength").value = p;
+      if ($("colorStrengthVal")) $("colorStrengthVal").textContent = p + "%";
     }
     if ($("promoEnabled")) {
       $("promoEnabled").checked = !!cfg.promo.enabled;
@@ -108,6 +114,11 @@
       const v = Math.max(0, Math.min(5, parseInt(e.target.value, 10) || 0));
       cfg.defaultLevel = v;
       if ($("defIntensityVal")) $("defIntensityVal").textContent = levelText(v);
+    });
+    on("colorStrength", "input", (e) => {
+      const v = Math.max(5, Math.min(60, parseInt(e.target.value, 10) || 22));
+      cfg.colorStrength = v / 100;
+      if ($("colorStrengthVal")) $("colorStrengthVal").textContent = v + "%";
     });
     on("promoEnabled", "change", (e) => (cfg.promo.enabled = e.target.checked));
     on("promoShade", "change", (e) => (cfg.promo.shadeId = e.target.value));

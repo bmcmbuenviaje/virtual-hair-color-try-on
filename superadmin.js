@@ -100,6 +100,7 @@
     cfg.privacy = Object.assign({ policyUrl: "", noticeText: "", retentionDays: 365 }, cfg.privacy || {});
     cfg.backend = Object.assign({ provider: "none", url: "" }, cfg.backend || {});
     if (cfg.defaultLevel == null) cfg.defaultLevel = 0;
+    if (cfg.colorStrength == null) cfg.colorStrength = 0.22;
     return cfg;
   }
   let cfg = loadCfg();
@@ -279,6 +280,11 @@
       $("defIntensity").value = cfg.defaultLevel;
       if ($("defIntensityVal")) $("defIntensityVal").textContent = levelText(cfg.defaultLevel);
     }
+    if ($("colorStrength")) {
+      const p = Math.round((cfg.colorStrength != null ? cfg.colorStrength : 0.22) * 100);
+      $("colorStrength").value = p;
+      if ($("colorStrengthVal")) $("colorStrengthVal").textContent = p + "%";
+    }
     if ($("hoUrl")) {
       $("hoUrl").value = cfg.handoff.url || "";
       $("hoSsid").value = cfg.handoff.wifiSsid || "";
@@ -335,6 +341,11 @@
       const v = Math.max(0, Math.min(5, parseInt(e.target.value, 10) || 0));
       cfg.defaultLevel = v;
       if ($("defIntensityVal")) $("defIntensityVal").textContent = (v <= 0 ? "Your hair (dark)" : "After " + v + (v === 1 ? " app" : " apps") + " · Level " + (5 + v));
+    });
+    on("colorStrength", "input", (e) => {
+      const v = Math.max(5, Math.min(60, parseInt(e.target.value, 10) || 22));
+      cfg.colorStrength = v / 100;
+      if ($("colorStrengthVal")) $("colorStrengthVal").textContent = v + "%";
     });
     on("hoUrl", "input", (e) => (cfg.handoff.url = e.target.value.trim()));
     on("hoSsid", "input", (e) => (cfg.handoff.wifiSsid = e.target.value));

@@ -49,6 +49,11 @@ window.ICOLOR_DEFAULT_CONFIG = {
   // dark base (most accurate); raise it to preview lighter/ash/nude looks.
   defaultLevel: 0,
 
+  // Overall AR colour opacity (0–1). How strongly the shade is deposited over the
+  // real hair. Lower = subtler / more natural (a light, believable tint that keeps
+  // the hair's own texture); ~0.18–0.25 looks best. Editable in Admin & Super Admin.
+  colorStrength: 0.22,
+
   // Feature switches. CONTROLLED BY SUPER ADMIN ONLY (superadmin.html).
   features: {
     photo: true,       // take photo

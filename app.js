@@ -31,6 +31,38 @@ function maskAlpha(m) {
   const t = (m - MASK_LO) / (MASK_HI - MASK_LO);
   return t * t * (3 - 2 * t); // smoothstep — clean, firm hairline
 }
+// How "skin-like" a pixel is (0..1), RELATIVE to the person's own hair brightness:
+// scalp showing through a parting (and the hairline/temples) is notably brighter
+// than the hair and warm. Judging it relative to the hair's mean luminance is the
+// key — it fades the scalp on dark hair (where it stands out) but does NOT touch
+// light-brown / blonde hair (nothing there is much brighter than the hair itself).
+function skinFactor(r, g, b, lum, hairLum) {
+  const excess = lum - hairLum;
+  if (excess < 30) return 0;   // not clearly brighter than the hair → it's hair
+  const dr = r - g;
+  if (dr <= 4) return 0;       // not warm (neutral highlight) → not skin
+  return Math.min(1, (excess - 30) / 45) * Math.min(1, (dr - 4) / 16);
+}
+// Mean luminance of the confident-hair pixels in a buffer (coarse sample), so the
+// skin guard can compare each pixel to the hair rather than an absolute threshold.
+function hairMeanLum(buf, w, h, mapx, mapy, mirror) {
+  let s = 0, n = 0;
+  const X0 = mapx.i0, XF = mapx.fr, Y0 = mapy.i0, YF = mapy.fr, mW = maskW, mH = maskH, mWm1 = mW - 1;
+  for (let y = 0; y < h; y += 4) {
+    const y0 = Y0[y], fy = YF[y], y1 = y0 + 1 < mH ? y0 + 1 : y0, rA = y0 * mW, rB = y1 * mW, rp = y * w;
+    for (let x = 0; x < w; x += 4) {
+      let gx = X0[x] + XF[x]; if (mirror) gx = mWm1 - gx;
+      let x0 = gx | 0; if (x0 < 0) x0 = 0; else if (x0 > mWm1) x0 = mWm1;
+      const fx = gx - x0 < 0 ? 0 : gx - x0, x1 = x0 + 1 < mW ? x0 + 1 : x0;
+      const a0 = maskData[rA + x0], b0 = maskData[rA + x1], a1 = maskData[rB + x0], b1 = maskData[rB + x1];
+      const top = a0 + (b0 - a0) * fx;
+      if (top + ((a1 + (b1 - a1) * fx) - top) * fy < 0.7) continue;
+      const i = (rp + x) << 2;
+      s += (buf[i] * 77 + buf[i + 1] * 150 + buf[i + 2] * 29) >> 8; n++;
+    }
+  }
+  return n ? s / n : 0;
+}
 
 /* ---- Dye "deposit" model tuning ----
    Hair color is simulated as a subtractive (multiply) mix of the person's
@@ -206,7 +238,10 @@ let selectedShade =
 // covers the box swatches (virgin ≈ stop 0, pre-lightened ≈ mid, Level 9 ≈ stop 4).
 const LEVEL_LIFT = [0.00, 0.30, 0.48, 0.63, 0.78, 0.90]; // stop 0..5 → base pre-lighten
 const MAX_LEVEL = LEVEL_LIFT.length - 1;                 // 5 applications
-const DEPOSIT_STRENGTH = 0.84;                           // one application; a touch of the real hair shows through
+// Overall AR colour opacity (config-driven). Subtle by default so it reads as a
+// natural tint, not a painted-on coat.
+const DEPOSIT_STRENGTH = Math.max(0.05, Math.min(1,
+  parseFloat(CONFIG.colorStrength != null ? CONFIG.colorStrength : 0.22) || 0.22));
 function levelLabel(i) {
   i = Math.max(0, Math.min(MAX_LEVEL, i | 0));
   if (i === 0) return t("lvl_base");
@@ -662,6 +697,7 @@ function recolorProc(pw, ph) {
   const s = strength;
   const R = sel.r, G = sel.g, B = sel.b;
   const X0 = mapX.i0, XF = mapX.fr, Y0 = mapY.i0, YF = mapY.fr, mW = maskW, mH = maskH;
+  const hairLum = hairMeanLum(d, pw, ph, mapX, mapY, false); // for the relative skin guard
   for (let y = 0; y < ph; y++) {
     const y0 = Y0[y], fy = YF[y], y1 = y0 + 1 < mH ? y0 + 1 : y0;
     const rowA = y0 * mW, rowB = y1 * mW;
@@ -673,10 +709,11 @@ function recolorProc(pw, ph) {
       const top = a0 + (b0 - a0) * fx, bot = a1 + (b1 - a1) * fx;
       const ma = maskAlpha(top + (bot - top) * fy); // bilinear-sampled hair confidence
       if (ma <= 0) continue;
-      const a = ma * s;
       const i = (rowPix + x) << 2;
       const r = d[i], g = d[i + 1], b = d[i + 2];
       const lum = (r * 77 + g * 150 + b * 29) >> 8;
+      const a = ma * s * (1 - 0.92 * skinFactor(r, g, b, lum, hairLum)); // never colour scalp/skin
+      if (a <= 0.003) continue;
       const shine = lum > SHINE_T ? (lum - SHINE_T) * SHINE_K : 0;
       d[i] = r + (R[r] + shine - r) * a;
       d[i + 1] = g + (G[g] + shine - g) * a;
@@ -908,6 +945,7 @@ function recolorBuffer(work, w, h, lut, mapx, mapy, mirror) {
   const s = strength;
   const R = lut.r, G = lut.g, B = lut.b;
   const X0 = mapx.i0, XF = mapx.fr, Y0 = mapy.i0, YF = mapy.fr, mW = maskW, mH = maskH, mWm1 = mW - 1;
+  const hairLum = hairMeanLum(work, w, h, mapx, mapy, mirror); // for the relative skin guard
   for (let y = 0; y < h; y++) {
     const y0 = Y0[y], fy = YF[y], y1 = y0 + 1 < mH ? y0 + 1 : y0;
     const rowA = y0 * mW, rowB = y1 * mW;
@@ -923,10 +961,11 @@ function recolorBuffer(work, w, h, lut, mapx, mapy, mirror) {
       const top = a0 + (b0 - a0) * fx, bot = a1 + (b1 - a1) * fx;
       const ma = maskAlpha(top + (bot - top) * fy); // bilinear-sampled hair confidence
       if (ma <= 0) continue;
-      const a = ma * s;
       const i = (rowPix + x) << 2;
       const r = work[i], g = work[i + 1], b = work[i + 2];
       const lum = (r * 77 + g * 150 + b * 29) >> 8;
+      const a = ma * s * (1 - 0.92 * skinFactor(r, g, b, lum, hairLum)); // never colour scalp/skin
+      if (a <= 0.003) continue;
       const shine = lum > SHINE_T ? (lum - SHINE_T) * SHINE_K : 0;
       work[i] = r + (R[r] + shine - r) * a;
       work[i + 1] = g + (G[g] + shine - g) * a;
