@@ -180,9 +180,15 @@
       <div class="dock-colors-body" id="dockColorsBody">
         <div class="intensity-row">
           <span class="intensity-icon" aria-hidden="true">🧴</span>
-          <input id="intensity" type="range" min="0" max="5" step="1" value="0" aria-label="Hair level — lightening applications" />
+          <div class="slider-col">
+            <input id="intensity" type="range" min="0" max="5" step="1" value="0" aria-label="Hair level — lightening applications" />
+            <div class="level-ticks" aria-hidden="true">
+              <span>Now</span><span>L6</span><span>L7</span><span>L8</span><span>L9</span><span>L10</span>
+            </div>
+          </div>
           <span id="intensityVal" class="intensity-val">Your hair (dark)</span>
         </div>
+        <p id="levelHint" class="level-hint hidden"></p>
         <div class="swatches-wrap">
           <div id="swatches" class="swatches" role="listbox" aria-label="iColor Plus shades"></div>
         </div>

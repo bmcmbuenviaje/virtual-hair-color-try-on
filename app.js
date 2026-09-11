@@ -81,6 +81,7 @@ const I18N = {
     ho_not_setup: "Photo transfer isn’t set up here.", ho_take_first: "Take a photo or clip first.",
     ho_nudge: "📱 Tap “Send to my phone” to take your photos home.",
     lvl_base: "Your hair (dark)", lvl_app_one: "After 1 app · Level {L}", lvl_app_n: "After {n} apps · Level {L}",
+    lvl_hint: "💡 {name} shows best on lighter hair — slide right to preview it. To get it for real, lighten first (see “How to get your colour” in your analysis).",
     langName: "EN",
   },
   tl: {
@@ -100,6 +101,7 @@ const I18N = {
     ho_not_setup: "Hindi naka-setup ang paglipat ng larawan dito.", ho_take_first: "Kumuha muna ng larawan o video.",
     ho_nudge: "📱 I-tap ang “Ipadala sa telepono ko” para maiuwi ang mga larawan.",
     lvl_base: "Buhok mo (madilim)", lvl_app_one: "Pagkatapos ng 1 app · Level {L}", lvl_app_n: "Pagkatapos ng {n} apps · Level {L}",
+    lvl_hint: "💡 Mas maganda ang {name} sa mas maliwanag na buhok — i-slide pakanan para makita. Para makuha talaga, mag-lighten muna (tingnan ang “How to get your colour” sa analysis).",
     langName: "TL",
   },
 };
@@ -120,6 +122,7 @@ function setLang(code) {
   try {
     const iv = document.getElementById("intensityVal"), inp = document.getElementById("intensity");
     if (iv && inp) iv.textContent = levelLabel(parseInt(inp.value, 10) || 0);
+    updateLevelHint();
   } catch (e) {}
 }
 
@@ -208,6 +211,22 @@ function levelLabel(i) {
   i = Math.max(0, Math.min(MAX_LEVEL, i | 0));
   if (i === 0) return t("lvl_base");
   return t(i === 1 ? "lvl_app_one" : "lvl_app_n").replace("{n}", i).replace("{L}", 5 + i);
+}
+// The hair level a shade needs to read true (from its own lightness), and the
+// approx base level the current slider stop is previewing — used for the hint.
+function shadeReqLevel(shade) {
+  if (!shade || !shade.hex) return 1;
+  const [r, g, b] = hexToRgb(shade.hex);
+  return levelFor((r * 77 + g * 150 + b * 29) >> 8).level;
+}
+function previewBaseLevel() { return level === 0 ? 3 : 5 + level; }
+function updateLevelHint() {
+  const el = $("levelHint");
+  if (!el) return;
+  const s = selectedShade;
+  const need = s && s.hex && s.id !== "none" && shadeReqLevel(s) > previewBaseLevel() + 1;
+  if (need) { el.textContent = t("lvl_hint").replace("{name}", s.name); el.classList.remove("hidden"); }
+  else el.classList.add("hidden");
 }
 let level = Math.max(0, Math.min(MAX_LEVEL,
   parseInt(CONFIG.defaultLevel != null ? CONFIG.defaultLevel : 0, 10) || 0));
@@ -1286,6 +1305,46 @@ function aftercareTips(top) {
   return t;
 }
 
+// Consultant-style, product-led "how to get the colour you want." Built around the
+// shade being tried (selectedShade), falling back to the top recommendation. Upsells
+// the iColor / LoveColor / Argan Beauty line and spells out lightening when needed.
+function colourGamePlan(a) {
+  let target = (selectedShade && selectedShade.hex && selectedShade.id !== "none")
+    ? selectedShade
+    : (a.recs && a.recs[0] && a.recs[0].shade);
+  if (!target || !target.hex) return null;
+  const targetLevel = shadeReqLevel(target);
+  const hairLevel = a.level.level;
+  const apps = Math.max(0, targetLevel - hairLevel); // ≈ one LoveColor application per level
+  const name = target.name;
+  const baseName = a.level.name.replace(/^Level \d+ · /, "");
+  const cool = target.tone === "cool" || /ash|nude|blonde|silver|grey|gray|pink|purple|blue|pastel/i.test(name);
+  const red = /red|cherry|burgundy|copper|mahogany|wine/i.test(name);
+  const steps = [], kit = [];
+
+  const headline = apps > 0
+    ? `Ooh, gorgeous choice — <b>${name}</b> is so worth it. It sits lighter than your ${baseName.toLowerCase()}, so here's exactly how I'd get you there, step by step:`
+    : `Love it — <b>${name}</b> will look amazing on you, and it's a <b>direct colour</b> (no lightening needed). Here's how to nail a salon-grade result at home:`;
+
+  if (apps > 0) {
+    steps.push(`<b>Lighten the base with LoveColor Hair Lightening Crème.</b> Each 35-minute application lifts about one level — from your Level ${hairLevel}, plan on about <b>${apps} application${apps > 1 ? "s" : ""}</b> to reach <b>Level ${targetLevel}</b>. Rest hair 30 minutes between rounds — do them same-day, or space over a couple of weeks to keep hair healthy.`);
+    kit.push("LoveColor Hair Lightening Crème");
+    if (targetLevel >= 9) {
+      steps.push(`Once you're blonde, keep it bright and brass-free with <b>LoveColor Purple Shampoo &amp; Conditioner</b> — it's what makes an ash or pastel really pay off.`);
+      kit.push("LoveColor Purple Shampoo & Conditioner");
+    }
+  }
+  steps.push(`<b>Colour with iColor Plus ${name} Shampoo-In.</b> On ${apps > 0 ? "the lightened, towel-dried base" : "clean, dry hair"}, massage in for 5 minutes, leave <b>30–45 minutes</b> for a full, even deposit, then rinse cool. One application lays the colour down beautifully.`);
+  kit.push(`iColor Plus ${name}`);
+  if (cool) steps.push(`Cool &amp; ash tones grab fast — check every few minutes so it tones rather than over-deposits, and keep a purple toning wash in your routine.`);
+  if (red) steps.push(`Reds are vivid but fade first — a quick <b>${name}</b> refresh every couple of weeks keeps it juicy.`);
+  steps.push(`<b>Seal &amp; nourish with the Argan Beauty Hair Mask &amp; Serum.</b> Colour-treated hair drinks it up — 5 minutes of mask, then a few drops of serum for that glassy, salon shine.`);
+  kit.push("Argan Beauty Hair Mask & Serum");
+  steps.push(`<b>Keep it gorgeous:</b> refresh <b>${name}</b> every 4–6 weeks with the shampoo-in shade (it tops up tone every wash), wash cool and less often, and always patch-test first. 💛`);
+
+  return { headline, steps, kit, apps, targetLevel };
+}
+
 let lastAnalysis = null;
 let recVibe = "all"; // recommendation filter: all | natural | bold | low
 const likeSel = new Set(); // user-picked "colours you like" (max 3)
@@ -1391,6 +1450,15 @@ function renderAnalysis(a) {
       <ul class="an-care">${a.brightening.tips.map((s) => `<li>${s}</li>`).join("")}</ul>
     </section>`;
 
+  const gp = colourGamePlan(a);
+  const gameplan = gp ? `
+    <section class="an-plan">
+      <h3>How to get your colour ${gp.apps > 0 ? `<span class="an-badge lift">Needs lightening</span>` : `<span class="an-badge ok">Direct colour</span>`}</h3>
+      <p class="an-lead">${gp.headline}</p>
+      <ol class="an-steps an-plan-steps">${gp.steps.map((s) => `<li>${s}</li>`).join("")}</ol>
+      <div class="an-kit"><h5>🛍️ Your iColor kit for this look</h5><ul>${gp.kit.map((k) => `<li>${k}</li>`).join("")}</ul></div>
+    </section>` : "";
+
   const apply = `
     <section>
       <h3>How to apply for the best result</h3>
@@ -1437,7 +1505,7 @@ function renderAnalysis(a) {
     </section>` : "";
 
   analysisBody.innerHTML =
-    fmt + detected + recs + statement + picks + brighten + leadsSec + apply + care +
+    fmt + detected + recs + gameplan + statement + picks + brighten + leadsSec + apply + care +
     `<p class="an-disc">This is a digital estimate from your photo and its lighting — not a professional diagnosis. Colours preview how each shade mixes with your real hair. Bleaching/lightening stresses hair — do it gradually, ideally with a professional, and always patch-test.</p>`;
 
   const leadBtn = analysisBody.querySelector("#leadSubmit");
@@ -2307,6 +2375,7 @@ function selectShade(shade) {
   }
   _shopDismissed = false; // a new pick re-enables the product card
   renderShopCard(shade);
+  updateLevelHint();
 }
 
 /* ---- "Shop the look" in-camera product card (paid feature) ---- */
@@ -2505,6 +2574,7 @@ intensity.addEventListener("input", () => {
   setSelectedLUT(selectedShade.hex); // rebuild the LUT for the new base lightness
   if (gridMode) buildGridItems();    // the compare grid bakes per-shade LUTs too
   intensityVal.textContent = levelLabel(level);
+  updateLevelHint();
   invalidate();
 });
 
@@ -2956,6 +3026,7 @@ function initAppUIOnce() {
   intensity.value = level;
   liftAmt = LEVEL_LIFT[level];
   intensityVal.textContent = levelLabel(level);
+  updateLevelHint();
 }
 
 function setStaticUI(on) {
