@@ -19,6 +19,15 @@
       ? '<span class="status-pill status-on">● Online</span>'
       : '<span class="status-pill status-off">● Offline</span>';
   }
+  // Compact camera/model/printer health badges for the fleet table.
+  function healthPill(r) {
+    const h = r && r.health;
+    if (!h) return '<span class="muted">—</span>';
+    const dot = (ok, lab) => `<span class="hdot ${ok === true ? "ok" : ok === false ? "bad" : "na"}" title="${lab}: ${ok === true ? "OK" : ok === false ? "FAIL" : "n/a"}">${lab[0]}</span>`;
+    let s = dot(h.camera, "Camera") + dot(h.model, "Model") + dot(h.printer, "Printer");
+    if (h.online === false) s += '<span class="hdot bad" title="Device reported offline">!</span>';
+    return s;
+  }
 
   const PERMS = [
     ["showShades", "Colour manager"],
@@ -273,6 +282,7 @@
       $("prQr").checked = cfg.print.qr !== false;
       $("prHeader").value = cfg.print.header || "";
       $("prFooter").value = cfg.print.footer || "";
+      if ($("prPaper")) $("prPaper").value = cfg.print.paperRoll || 0;
       const th = $("prThermal"); if (th) th.style.display = (cfg.print.mode === "thermal") ? "" : "none";
     }
     if ($("attractIdle")) {
@@ -349,6 +359,7 @@
     on("prQr", "change", (e) => (cfg.print.qr = e.target.checked));
     on("prHeader", "input", (e) => (cfg.print.header = e.target.value));
     on("prFooter", "input", (e) => (cfg.print.footer = e.target.value));
+    on("prPaper", "input", (e) => (cfg.print.paperRoll = Math.max(0, parseInt(e.target.value, 10) || 0)));
     on("prTest", "click", async () => {
       const st = $("prStatus"); const set = (m) => { if (st) st.textContent = m; };
       if (!window.ICPrinter) { set("Printer module not loaded."); return; }
@@ -427,6 +438,7 @@
       D.kpi("QR scans", D.fmt(t.qrscan || 0), D.fmt(t.qrshow || 0) + " hand-offs") +
       D.kpi("Shop clicks", D.fmt(t.shopclick || 0), "buy taps") +
       D.kpi("Photos sent", D.fmt(t.handoff || 0), "to phones") +
+      D.kpi("Prints", D.fmt(t.print || 0), "analysis printouts") +
       D.kpi("Shares", D.fmt(t.share), "social cards");
     const heatEl = $("heat"); if (heatEl) heatEl.innerHTML = D.heat(agg.perHour);
     // A/B promo comparison
@@ -460,11 +472,13 @@
       `<tr><td>${r.meta.name}</td><td><span class="pill-tag ${r.meta.type}">${r.meta.type}</span></td>` +
       `<td class="num">${D.fmt(r.sessions)}</td><td class="num">${D.fmt(r.tryon)}</td>` +
       `<td class="num">${D.fmt(r.captures)}</td><td class="num">${D.fmt(r.analysis)}</td>` +
+      `<td class="num">${D.fmt(r.print || 0)}${r.printToday ? ` <span class="muted">(${r.printToday} today)</span>` : ""}</td>` +
       `<td class="num">${D.fmt(r.qrscan || 0)}</td>` +
       `<td>${r.build ? r.build : "—"}</td>` +
+      `<td class="hcell">${healthPill(r)}</td>` +
       `<td>${onlinePill(r)}</td>` +
       `<td>${r.lastSeen ? new Date(r.lastSeen).toLocaleString() : "—"}</td></tr>`
-    ).join("") : `<tr><td colspan="10" style="color:var(--muted)">No data yet — import location exports or load demo data.</td></tr>`;
+    ).join("") : `<tr><td colspan="12" style="color:var(--muted)">No data yet — import location exports or load demo data.</td></tr>`;
 
     const skus = D.topSkus(agg.perSku, 12);
     $("skuBars").innerHTML = skus.length ? D.bars(skus) : `<p class="hint" style="color:var(--muted)">No product data yet.</p>`;

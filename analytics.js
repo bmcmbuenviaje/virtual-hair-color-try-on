@@ -112,6 +112,20 @@
     save(db);
   }
 
+  // Fleet health beacon. Stamps the current location with its build tag + a live
+  // health snapshot (camera / model / printer / backend / online). Travels to Super
+  // Admin via the same location snapshot the backend already syncs (upsertLocation),
+  // and via analytics export/import when there's no backend.
+  function heartbeat(info) {
+    info = info || {};
+    const db = load();
+    const L = ensureLoc(db, currentLocation());
+    if (info.build) L.build = info.build;
+    if (info.health) L.health = Object.assign({}, L.health || {}, info.health, { ts: new Date().toISOString() });
+    L.lastSeen = new Date().toISOString();
+    save(db);
+  }
+
   // Opt-in lead (consent-only; stored locally, exported as CSV by Super Admin).
   function addLead(lead) {
     const db = load();
@@ -203,7 +217,10 @@
         qrscan: L.totals.qrscan || 0,
         qrshow: L.totals.qrshow || 0,
         leads: L.totals.leads || 0,
+        print: L.totals.print || 0,
+        printToday: (L.perDay[dayKey()] && L.perDay[dayKey()].print) || 0,
         build: L.build || "",
+        health: L.health || null,
         lastSeen: L.lastSeen,
         lastSync: L.lastSync || null,
       };
@@ -291,7 +308,7 @@
   function shadeHex(id) { const s = (resolvedConfig().shades || []).find((x) => x.id === id); return s ? s.hex : "#888888"; }
 
   window.Analytics = {
-    KEY, load, save, track, addLead, leadsCSV, purgeOldLeads, logCoupon, couponsCSV, avgDwellSec, consolidate, mergeImport,
+    KEY, load, save, track, heartbeat, addLead, leadsCSV, purgeOldLeads, logCoupon, couponsCSV, avgDwellSec, consolidate, mergeImport,
     exportLocation, seedDemo, clearAll, currentLocation, ensureLoc, shadeName, shadeHex,
     dayKey, resolvedConfig, isQrLanding, urlLoc, setVariant,
   };

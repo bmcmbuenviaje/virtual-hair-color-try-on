@@ -164,6 +164,7 @@
             <option value="thermal">Thermal receipt (USB / Bluetooth)</option>
           </select>
         </div>
+        <div class="field" style="width:150px"><label>Paper alert (prints/day)</label><input id="prPaper" type="number" min="0" class="num" placeholder="0 = off" /></div>
         <button id="prTest" class="btn ghost" type="button">Test print</button>
         <span id="prStatus" class="muted" style="font-size:12.5px"></span>
       </div>
@@ -280,7 +281,7 @@
       <h2>Locations <span class="muted">/ activations</span></h2>
       <div style="overflow-x:auto">
         <table class="loc-table" id="locTable"><thead><tr>
-          <th>Location</th><th>Type</th><th class="num">Sessions</th><th class="num">Try-ons</th><th class="num">Captures</th><th class="num">Analyses</th><th class="num">QR scans</th><th>Build</th><th>Status</th><th>Last activity</th>
+          <th>Location</th><th>Type</th><th class="num">Sessions</th><th class="num">Try-ons</th><th class="num">Captures</th><th class="num">Analyses</th><th class="num">Prints</th><th class="num">QR scans</th><th>Build</th><th>Health</th><th>Status</th><th>Last activity</th>
         </tr></thead><tbody></tbody></table>
       </div>
     </div>

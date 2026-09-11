@@ -116,6 +116,7 @@
       $("prQr").checked = cfg.print.qr !== false;
       $("prHeader").value = cfg.print.header || "";
       $("prFooter").value = cfg.print.footer || "";
+      if ($("prPaper")) $("prPaper").value = cfg.print.paperRoll || 0;
       const th = $("prThermal"); if (th) th.style.display = (cfg.print.mode === "thermal") ? "" : "none";
     }
   }
@@ -160,6 +161,7 @@
     on("prQr", "change", (e) => (cfg.print.qr = e.target.checked));
     on("prHeader", "input", (e) => (cfg.print.header = e.target.value));
     on("prFooter", "input", (e) => (cfg.print.footer = e.target.value));
+    on("prPaper", "input", (e) => (cfg.print.paperRoll = Math.max(0, parseInt(e.target.value, 10) || 0)));
     on("prTest", "click", async () => {
       const st = $("prStatus"); const set = (m) => { if (st) st.textContent = m; };
       if (!window.ICPrinter) { set("Printer module not loaded."); return; }

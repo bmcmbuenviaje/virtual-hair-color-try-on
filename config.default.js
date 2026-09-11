@@ -136,6 +136,9 @@ window.ICOLOR_DEFAULT_CONFIG = {
     copies: 1,               // thermal: number of copies
     header: "",              // thermal top line (blank = this deployment's location name)
     footer: "Great Lengths PH",  // thermal bottom line
+    paperRoll: 0,            // sheets/receipts per roll or ream (0 = off). When today's
+                             // print count nears/hits this, staff get a "replace paper"
+                             // nudge; Super Admin also sees prints-today per kiosk.
   },
 
   // A5 print report design (edited in the client admin when 'print' is enabled).

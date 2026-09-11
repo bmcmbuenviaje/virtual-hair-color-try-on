@@ -70,6 +70,22 @@ html, body {
 .status-pill { font-size: 11px; font-weight: 800; letter-spacing: 0.3px; white-space: nowrap; }
 .status-pill.status-on { color: #6bbf59; }
 .status-pill.status-off { color: #c77; }
+/* Kiosk self-test modal */
+.st-body { padding: 6px 4px 4px; }
+.st-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.st-item { display: grid; grid-template-columns: 26px 130px 1fr; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,0.05); }
+.st-dot { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; font-weight: 800; font-size: 13px; color: #fff; background: #888; }
+.st-dot.ok { background: #4a9e3f; } .st-dot.bad { background: #c0504d; } .st-dot.warn { background: #c79a2e; } .st-dot.info { background: #5a78a0; } .st-dot.run { background: #666; }
+.st-name { font-weight: 700; }
+.st-detail { color: var(--muted, #9aa); font-size: 13px; overflow-wrap: anywhere; }
+.st-actions { display: flex; align-items: center; gap: 12px; }
+
+/* Fleet health badges (camera/model/printer): C M P dots */
+.hcell { white-space: nowrap; }
+.hdot { display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px; margin-right: 2px; border-radius: 4px; font-size: 10px; font-weight: 800; color: #fff; }
+.hdot.ok { background: #4a9e3f; }
+.hdot.bad { background: #c0504d; }
+.hdot.na { background: #888; opacity: 0.5; }
 .lead-privacy { font-size: 11px; color: var(--muted); line-height: 1.4; margin: 2px 0 0; }
 .lead-privacy a { color: var(--accent-2); }
 /* Shop the look — in-camera product card */

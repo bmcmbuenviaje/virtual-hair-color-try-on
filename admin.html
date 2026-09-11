@@ -106,7 +106,9 @@
           <option value="thermal">Thermal receipt (USB / Bluetooth)</option>
         </select>
       </div>
+      <div class="field" style="width:150px"><label>Paper alert (prints/day)</label><input id="prPaper" type="number" min="0" class="num" placeholder="0 = off" /></div>
       <button id="prTest" class="btn ghost" type="button">Test print</button>
+      <a class="btn ghost" href="index.html?selftest=1" target="_blank" rel="noopener" title="Open the kiosk app and run camera / model / printer checks">🔧 Kiosk self-test</a>
       <span id="prStatus" class="muted" style="font-size:12.5px"></span>
     </div>
     <div id="prThermal" class="row" style="gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:12px;display:none">

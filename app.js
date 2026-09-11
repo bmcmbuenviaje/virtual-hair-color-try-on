@@ -96,9 +96,43 @@ const FEATURES = Object.assign(
 
 // Printer routing (staff-declared type). See config.default.js → print.
 const PRINT = Object.assign(
-  { mode: "color", transport: "bluetooth", widthMm: 58, qr: true, copies: 1, header: "", footer: "Great Lengths PH" },
+  { mode: "color", transport: "bluetooth", widthMm: 58, qr: true, copies: 1, header: "", footer: "Great Lengths PH", paperRoll: 0 },
   CONFIG.print || {}
 );
+
+// Count a print (consumable) + nudge staff when the day's count nears the roll size.
+function notePrint() {
+  trk("print");
+  const roll = parseInt(PRINT.paperRoll, 10) || 0;
+  if (roll <= 0) return;
+  let n = 0;
+  try { const A = window.Analytics, L = A.load().locations[A.currentLocation().id]; n = (L && L.perDay[A.dayKey()] && L.perDay[A.dayKey()].print) || 0; } catch (e) {}
+  if (n >= roll) showToast("🧻 Printer likely out of paper — " + n + " prints today. Replace the roll/ream.");
+  else if (n >= Math.round(roll * 0.8)) showToast("🧻 Paper running low — " + n + "/" + roll + " today.");
+}
+
+// Live kiosk health (for the fleet beacon + self-test). Flags flip as subsystems
+// come up; pulseHealth() stamps a snapshot onto analytics (synced to Super Admin).
+const HEALTH = { build: CONFIG.build || "", camera: false, model: false };
+function printerReady() {
+  if (!FEATURES.print) return null; // feature off → not applicable
+  if ((PRINT.mode || "color") !== "thermal") return true; // OS dialog — always available
+  return !!(window.ICPrinter && window.ICPrinter.supported(PRINT.transport || "bluetooth"));
+}
+function pulseHealth() {
+  try {
+    const A = window.Analytics; if (!A || !A.heartbeat) return;
+    let printToday = 0;
+    try { const L = A.load().locations[A.currentLocation().id]; printToday = (L && L.perDay[A.dayKey()] && L.perDay[A.dayKey()].print) || 0; } catch (e) {}
+    A.heartbeat({ build: HEALTH.build, health: {
+      camera: HEALTH.camera, model: HEALTH.model,
+      printer: printerReady(), printMode: FEATURES.print ? (PRINT.mode || "color") : null,
+      backend: !!(window.Backend && window.Backend.enabled()),
+      online: navigator.onLine !== false, printToday,
+      ua: (navigator.userAgent || "").slice(0, 120),
+    } });
+  } catch (e) {}
+}
 
 /* ---- i18n (Tagalog / English) ---- */
 const I18N = {
@@ -457,6 +491,7 @@ async function startCamera() {
     if (video.readyState >= 2) return res();
     video.onloadeddata = () => res();
   });
+  HEALTH.camera = true;
 }
 
 function stopStream() {
@@ -490,6 +525,7 @@ async function initSegmenter(delegate = "GPU") {
       cpuMode = true;
     } else throw e;
   }
+  HEALTH.model = true;
 }
 
 // Run segmentation on a source (video/canvas) and store a private copy of the
@@ -2608,7 +2644,7 @@ async function thermalPrintNow(a) {
   try {
     await window.ICPrinter.printThermal(bytes, { transport, copies: PRINT.copies || 1, onStatus: (s) => showToast(s) });
     showToast("Printed ✓");
-    trk("print");
+    notePrint();
   } catch (e) {
     showToast("Print failed: " + (e && e.message ? e.message : "check the printer & pairing"));
   }
@@ -2624,6 +2660,7 @@ async function printReportCard() {
   const img = printReport.querySelector("img");
   await (img.complete ? Promise.resolve() : new Promise((r) => { img.onload = img.onerror = r; }));
   window.print();
+  notePrint();
 }
 
 /* ============================================================
@@ -3692,12 +3729,19 @@ if (FEATURES.offline && "serviceWorker" in navigator && location.protocol !== "f
   window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
 }
 
+// Fleet health beacon: stamp build + a health snapshot locally on load and every
+// 60s (works offline; travels to Super Admin via the backend sync below or export).
+pulseHealth();
+setInterval(pulseHealth, 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) pulseHealth(); });
+
 // Live backend (optional): mirror this location to the cloud + pull fleet config.
 if (window.Backend && window.Backend.enabled()) {
   window.Backend.init().then((ok) => {
     if (!ok) return;
     const flush = () => { try { window.Backend.flushLeadOutbox && window.Backend.flushLeadOutbox(); } catch (e) {} };
-    setInterval(() => { window.Backend.upsertLocation(); flush(); }, 30000);
+    setInterval(() => { pulseHealth(); window.Backend.upsertLocation(); flush(); }, 30000);
+    pulseHealth();
     window.Backend.upsertLocation();
     flush(); // drain any leads captured while offline
     window.addEventListener("online", flush);
@@ -3711,6 +3755,104 @@ if (window.Backend && window.Backend.enabled()) {
       }).catch(() => {});
     }
   });
+}
+
+/* ============================================================
+   Kiosk self-test — pre-shift diagnostics (camera / model / printer /
+   backend / offline cache). Open with ?selftest=1, triple-tap the logo,
+   or the "Self-test" button in the Admin console.
+   ============================================================ */
+function ensureSelfTestModal() {
+  let m = $("selfTestModal");
+  if (m) return m;
+  m = document.createElement("div");
+  m.id = "selfTestModal";
+  m.className = "modal hidden";
+  m.innerHTML =
+    '<div class="modal-head"><h2>Kiosk self-test</h2>' +
+    '<button class="icon-btn" data-st-close aria-label="Close"><svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="m12 10.6 5-5 1.4 1.4-5 5 5 5L17 18.4l-5-5-5 5L5.6 17l5-5-5-5L7 5.6l5 5Z"/></svg></button></div>' +
+    '<div class="st-body"><div id="stList" class="st-list"></div>' +
+    '<div class="st-actions"><button id="stRun" class="btn">Run checks</button> <span id="stSummary" class="muted"></span></div></div>';
+  document.body.appendChild(m);
+  m.querySelector("[data-st-close]").addEventListener("click", () => m.classList.add("hidden"));
+  m.querySelector("#stRun").addEventListener("click", () => runSelfTest());
+  return m;
+}
+async function probeCamera() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return { status: "bad", detail: "No camera API (needs HTTPS)" };
+  let s = null;
+  try {
+    s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facingMode } }, audio: false });
+    const track = s.getVideoTracks()[0];
+    HEALTH.camera = true;
+    return { status: "ok", detail: ((track && track.label) || "camera").slice(0, 42) };
+  } catch (e) {
+    HEALTH.camera = false;
+    return { status: "bad", detail: e && e.name === "NotAllowedError" ? "Permission denied" : (e && e.name) || "No camera" };
+  } finally { if (s) s.getTracks().forEach((t) => t.stop()); }
+}
+async function probeModel() {
+  if (segmenter && HEALTH.model) return { status: "ok", detail: cpuMode ? "loaded (CPU)" : "loaded (GPU)" };
+  try { await initSegmenter(cpuMode ? "CPU" : "GPU"); return { status: "ok", detail: "loaded " + (cpuMode ? "(CPU)" : "(GPU)") }; }
+  catch (e) { return { status: "bad", detail: "model/wasm failed (needs internet on first load)" }; }
+}
+function probePrinter() {
+  if (!FEATURES.print) return { status: "info", detail: "Print feature off" };
+  const mode = PRINT.mode || "color";
+  if (mode !== "thermal") return { status: "ok", detail: mode.toUpperCase() + " → device print dialog" };
+  const sup = window.ICPrinter && window.ICPrinter.supported(PRINT.transport || "bluetooth");
+  return sup
+    ? { status: "ok", detail: "Thermal " + (PRINT.transport || "bluetooth") + " ready (pair in Admin → Test print)" }
+    : { status: "bad", detail: (PRINT.transport || "bluetooth") + " not supported here (iOS can't)" };
+}
+async function probeBackend() {
+  if (!(window.Backend && window.Backend.enabled())) return { status: "info", detail: "Local only (no backend)" };
+  try { const ok = await window.Backend.init(); return ok ? { status: "ok", detail: "connected" } : { status: "bad", detail: "unreachable" }; }
+  catch (e) { return { status: "bad", detail: "unreachable" }; }
+}
+async function probeSW() {
+  if (!FEATURES.offline) return { status: "info", detail: "Offline cache off" };
+  if (!("serviceWorker" in navigator)) return { status: "warn", detail: "No service-worker support" };
+  try { const reg = await navigator.serviceWorker.getRegistration(); return reg ? { status: "ok", detail: navigator.serviceWorker.controller ? "active (offline-ready)" : "registered" } : { status: "warn", detail: "not registered yet" }; }
+  catch (e) { return { status: "warn", detail: "unknown" }; }
+}
+async function runSelfTest() {
+  ensureSelfTestModal();
+  const list = $("stList"); if (!list) return;
+  const checks = [
+    { name: "App build", run: () => ({ status: "info", detail: CONFIG.build || "—" }) },
+    { name: "Location", run: () => { const l = (window.Analytics && window.Analytics.currentLocation()) || {}; return { status: l.id && l.id !== "unassigned" ? "ok" : "warn", detail: l.name || "unassigned" }; } },
+    { name: "Network", run: () => ({ status: navigator.onLine === false ? "warn" : "info", detail: navigator.onLine === false ? "Offline (fine for kiosks)" : "Online" }) },
+    { name: "Camera", run: probeCamera },
+    { name: "Hair model", run: probeModel },
+    { name: "Printer", run: probePrinter },
+    { name: "Backend sync", run: probeBackend },
+    { name: "Offline cache", run: probeSW },
+  ];
+  list.innerHTML = checks.map((c, i) => `<div class="st-item" data-i="${i}"><span class="st-dot run">⋯</span><span class="st-name">${c.name}</span><span class="st-detail">testing…</span></div>`).join("");
+  const sum = $("stSummary"); if (sum) sum.textContent = "";
+  let bad = 0;
+  for (let i = 0; i < checks.length; i++) {
+    let r; try { r = await checks[i].run(); } catch (e) { r = { status: "bad", detail: (e && e.message) || "error" }; }
+    const row = list.querySelector(`[data-i="${i}"]`); if (!row) continue;
+    const dot = row.querySelector(".st-dot"), det = row.querySelector(".st-detail");
+    dot.className = "st-dot " + r.status;
+    dot.textContent = r.status === "ok" ? "✓" : r.status === "bad" ? "✕" : r.status === "warn" ? "!" : "i";
+    det.textContent = r.detail || "";
+    if (r.status === "bad") bad++;
+  }
+  if (sum) sum.textContent = bad ? bad + " issue" + (bad > 1 ? "s" : "") + " — see the red rows" : "All good — ready for the shift ✓";
+  pulseHealth();
+}
+function openSelfTest() { const m = ensureSelfTestModal(); m.classList.remove("hidden"); runSelfTest(); }
+// Triggers: ?selftest=1 on load, and a triple-tap on the start-screen logo.
+try { if (new URLSearchParams(location.search).get("selftest")) setTimeout(openSelfTest, 500); } catch (e) {}
+{
+  const plate = document.querySelector(".logo-plate");
+  if (plate) {
+    let taps = 0, tmr = null;
+    plate.addEventListener("click", () => { taps++; clearTimeout(tmr); if (taps >= 3) { taps = 0; openSelfTest(); } else tmr = setTimeout(() => (taps = 0), 600); });
+  }
 }
 
 /* ---- Promo banner + QR handoff (start screen) ---- */
