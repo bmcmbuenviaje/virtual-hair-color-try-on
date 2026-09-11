@@ -48,6 +48,7 @@
       ["split", "Before / after", "Split-screen compare"],
       ["grid", "Compare grid", "See every shade at once"],
       ["brighten", "Brighten", "Preview on pre-lightened hair"],
+      ["twotone", "Two-tone (dip-dye)", "Opt-in: darker roots → lighter ends"],
       ["getlook", "Get this look", "Match a shade from a photo"],
       ["camguide", "Camera guidance", "Face-fit + lighting help"],
       ["attract", "Attract mode", "Idle camera-mirror teaser"],

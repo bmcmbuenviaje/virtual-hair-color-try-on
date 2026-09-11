@@ -82,6 +82,7 @@ window.ICOLOR_DEFAULT_CONFIG = {
     commerce: true,    // "shop the look" ecommerce product card (PAID add-on)
     camguide: true,    // camera fit guidance (positioning oval + low-light hint)
     handoff: false,    // "send to my phone" — offline transfer of captures to a guest's phone via an on-site box
+    twotone: false,    // OPT-IN dip-dye preview: gentle darker roots → lighter ends (off = the natural, even colour)
   },
 
   // Shade-of-the-week promo banner (Super Admin sets; shows on the start screen).

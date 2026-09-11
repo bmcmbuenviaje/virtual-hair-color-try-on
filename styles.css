@@ -180,6 +180,13 @@ textarea:focus-visible, [tabindex]:focus-visible, [role="button"]:focus-visible 
 @keyframes attractPulse { 0% { box-shadow: 0 0 0 0 rgba(224,196,106,0.6); } 70% { box-shadow: 0 0 0 34px rgba(224,196,106,0); } 100% { box-shadow: 0 0 0 0 rgba(224,196,106,0); } }
 .attract-cta { color: #fff; font-size: 30px; font-weight: 800; margin: 0 0 6px; text-shadow: 0 2px 14px rgba(0,0,0,0.6); animation: attractFade 2.4s ease-in-out infinite; }
 .attract-sub { color: rgba(255,255,255,0.85); font-size: 14px; letter-spacing: 0.4px; margin: 0; text-shadow: 0 1px 8px rgba(0,0,0,0.6); }
+.attract-board { margin: 20px auto 0; max-width: 320px; background: rgba(0,0,0,0.42); border: 1px solid rgba(255,255,255,0.18); border-radius: 14px; padding: 12px 14px; backdrop-filter: blur(4px); }
+.attract-board.hidden { display: none; }
+.attract-board-title { color: #ffd98a; font-size: 13px; font-weight: 800; letter-spacing: 0.3px; margin-bottom: 8px; }
+.ab-row { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+.ab-rank { width: 18px; color: rgba(255,255,255,0.7); font-weight: 800; font-size: 13px; }
+.ab-sw { width: 18px; height: 18px; border-radius: 50%; box-shadow: 0 0 0 1.5px rgba(255,255,255,0.5) inset; flex: none; }
+.ab-name { color: #fff; font-size: 14px; font-weight: 600; text-shadow: 0 1px 6px rgba(0,0,0,0.6); }
 @keyframes attractFade { 0%,100% { opacity: 0.75; } 50% { opacity: 1; } }
 .attract-overlay:focus-visible { outline: 3px solid var(--accent-2); outline-offset: -6px; }
 @media (prefers-reduced-motion: reduce) { .attract-ring, .attract-cta { animation: none; } }

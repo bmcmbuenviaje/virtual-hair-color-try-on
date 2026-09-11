@@ -149,7 +149,7 @@ const I18N = {
     ho_code: "Code", ho_foot: "Your photos live only on the on-site box and are auto-deleted at end of day.",
     ho_prep: "Preparing your photos…", ho_err_title: "Couldn’t reach the photo box.",
     ho_err_sub: "Make sure this display is connected to the on-site Wi-Fi box, then try again.",
-    ho_retry: "Try again", ho_send: "Send to my phone", ho_tophone: "To phone",
+    ho_retry: "Try again", ho_send: "Send to my phone", ho_tophone: "To phone", beforeafter: "Before/After",
     ho_not_setup: "Photo transfer isn’t set up here.", ho_take_first: "Take a photo or clip first.",
     ho_nudge: "📱 Tap “Send to my phone” to take your photos home.",
     lvl_base: "Your hair (dark)", lvl_app_one: "After 1 app · Level {L}", lvl_app_n: "After {n} apps · Level {L}",
@@ -169,7 +169,7 @@ const I18N = {
     ho_code: "Code", ho_foot: "Ang mga larawan ay nasa on-site box lang at awtomatikong buburahin sa katapusan ng araw.",
     ho_prep: "Inihahanda ang iyong mga larawan…", ho_err_title: "Hindi maabot ang photo box.",
     ho_err_sub: "Siguraduhing nakakonekta ang display sa on-site Wi-Fi box, tapos subukan muli.",
-    ho_retry: "Subukan muli", ho_send: "Ipadala sa telepono ko", ho_tophone: "Sa telepono",
+    ho_retry: "Subukan muli", ho_send: "Ipadala sa telepono ko", ho_tophone: "Sa telepono", beforeafter: "Before/After",
     ho_not_setup: "Hindi naka-setup ang paglipat ng larawan dito.", ho_take_first: "Kumuha muna ng larawan o video.",
     ho_nudge: "📱 I-tap ang “Ipadala sa telepono ko” para maiuwi ang mga larawan.",
     lvl_base: "Buhok mo (madilim)", lvl_app_one: "Pagkatapos ng 1 app · Level {L}", lvl_app_n: "Pagkatapos ng {n} apps · Level {L}",
@@ -740,7 +740,16 @@ function recolorProc(pw, ph) {
   const R = sel.r, G = sel.g, B = sel.b;
   const X0 = mapX.i0, XF = mapX.fr, Y0 = mapY.i0, YF = mapY.fr, mW = maskW, mH = maskH;
   const hairLum = hairMeanLum(d, pw, ph, mapX, mapY, false); // for the relative skin guard
+  // Optional dip-dye: gentle darker roots → lighter ends. Fully off (identical path)
+  // unless features.twotone is on; then modulate the deposited colour by vertical
+  // position within the hair's bounding box.
+  const twoTone = FEATURES.twotone;
+  let ttTop = 0, ttRange = 1, ttOn = false;
+  if (twoTone) { const bb = hairVBox(); if (bb && bb.bot > bb.top + 0.05) { ttTop = bb.top; ttRange = bb.bot - bb.top; ttOn = true; } }
   for (let y = 0; y < ph; y++) {
+    // per-row two-tone factor (0.9 at roots → 1.14 at ends)
+    let ttF = 1;
+    if (ttOn) { let p = (y / ph - ttTop) / ttRange; p = p < 0 ? 0 : p > 1 ? 1 : p; ttF = 0.9 + 0.24 * p; }
     const y0 = Y0[y], fy = YF[y], y1 = y0 + 1 < mH ? y0 + 1 : y0;
     const rowA = y0 * mW, rowB = y1 * mW;
     const rowPix = y * pw;
@@ -757,12 +766,27 @@ function recolorProc(pw, ph) {
       const a = ma * s * (1 - 0.92 * skinFactor(r, g, b, lum, hairLum)); // never colour scalp/skin
       if (a <= 0.003) continue;
       const shine = lum > SHINE_T ? (lum - SHINE_T) * SHINE_K : 0;
-      d[i] = r + (R[r] + shine - r) * a;
-      d[i + 1] = g + (G[g] + shine - g) * a;
-      d[i + 2] = b + (B[b] + shine - b) * a;
+      let tR = R[r], tG = G[g], tB = B[b];
+      if (ttOn) { tR *= ttF; if (tR > 255) tR = 255; tG *= ttF; if (tG > 255) tG = 255; tB *= ttF; if (tB > 255) tB = 255; }
+      d[i] = r + (tR + shine - r) * a;
+      d[i + 1] = g + (tG + shine - g) * a;
+      d[i + 2] = b + (tB + shine - b) * a;
     }
   }
   pctx.putImageData(frame, 0, 0);
+}
+
+// Vertical bounding box of confident hair (normalized 0..1) — for the two-tone effect.
+function hairVBox() {
+  if (!maskData) return null;
+  let top = -1, bot = -1;
+  for (let my = 0; my < maskH; my++) {
+    const row = my * maskW;
+    let any = false;
+    for (let mx = 0; mx < maskW; mx += 2) { if (maskData[row + mx] > 0.6) { any = true; break; } }
+    if (any) { if (top < 0) top = my; bot = my; }
+  }
+  return top < 0 ? null : { top: top / maskH, bot: bot / maskH };
 }
 
 /* ---- single-view / split blit ---- */
@@ -3119,6 +3143,60 @@ recordBtn.addEventListener("click", () => {
   else startRecording();
 });
 
+/* ---- Before/after reveal clip (animates the split wipe while recording) ---- */
+let clipRecording = false;
+async function recordBeforeAfterClip() {
+  if (clipRecording) return;
+  if (!canvas.captureStream || !window.MediaRecorder) { showToast("Clips aren't supported on this browser"); return; }
+  if (isRecording()) { showToast("Finish the video first"); return; }
+  if (!sel || !maskData) { showToast("Pick a colour first"); return; }
+  if (gridMode) { showToast("Exit the grid to make a clip"); return; }
+  clipRecording = true;
+  const prevSplit = splitView, prevX = splitX;
+  splitView = true;
+  const clipBtn = $("clipBtn"); if (clipBtn) clipBtn.classList.add("is-recording");
+  const mime = pickMime();
+  let stream, rec;
+  try { stream = canvas.captureStream(30); rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined); }
+  catch (e) { clipRecording = false; splitView = prevSplit; splitX = prevX; if (clipBtn) clipBtn.classList.remove("is-recording"); showToast("Unable to record"); return; }
+  const chunks = []; rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+  const stopped = new Promise((res) => (rec.onstop = res));
+  rec.start(100);
+  showToast("Creating your before/after…");
+  const DUR = 4200, t0 = performance.now();
+  await new Promise((res) => {
+    function step() {
+      const t = (performance.now() - t0) / DUR;
+      if (t >= 1) { res(); return; }
+      // hold BEFORE → sweep to AFTER → hold → sweep back
+      let x;
+      if (t < 0.15) x = 0.05;
+      else if (t < 0.5) x = 0.05 + 0.9 * ((t - 0.15) / 0.35);
+      else if (t < 0.62) x = 0.95;
+      else x = 0.95 - 0.9 * ((t - 0.62) / 0.38);
+      splitX = x; invalidate();
+      requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+  try { rec.stop(); } catch (e) {}
+  try { stream.getTracks().forEach((tk) => tk.stop()); } catch (e) {}
+  await stopped;
+  splitView = prevSplit; splitX = prevX; invalidate();
+  if (clipBtn) clipBtn.classList.remove("is-recording");
+  clipRecording = false;
+  const type = rec.mimeType || "video/webm", ext = type.includes("mp4") ? "mp4" : "webm";
+  const blob = new Blob(chunks, { type });
+  if (!blob.size) { showToast("Clip was empty — try again"); return; }
+  const url = URL.createObjectURL(blob);
+  const name = `icolorplus-beforeafter-${timestamp()}.${ext}`;
+  addCapture({ type: "video", url, blob, name });
+  triggerDownload(url, name);
+  showToast("Before/after clip saved");
+  trk("video");
+}
+{ const cb = $("clipBtn"); if (cb) cb.addEventListener("click", recordBeforeAfterClip); }
+
 /* ============================================================
    Downloads + gallery
    ============================================================ */
@@ -3720,8 +3798,22 @@ async function enterAttract() {
     const sh = SHADES.find((s) => s.id === ATTRACT.shadeId) || SHADES[0];
     if (sh) selectShade(sh);
     if ($("attractCta") && ATTRACT.cta) $("attractCta").textContent = ATTRACT.cta;
+    renderAttractBoard();
     if (attractOverlay) attractOverlay.classList.remove("hidden");
   } catch (e) { attractActive = false; } // no camera → stay on the start screen
+}
+// "Most-loved shades here" leaderboard on the idle attract mirror (this location's
+// top try-ons). Hidden until there's a little data so it never shows a lonely "1".
+function renderAttractBoard() {
+  const el = $("attractBoard"); if (!el) return;
+  let perSku = {};
+  try { const A = window.Analytics, L = A.load().locations[A.currentLocation().id]; perSku = (L && L.perSku) || {}; } catch (e) {}
+  let top = [];
+  try { top = window.Dash ? window.Dash.topSkus(perSku, 3) : []; } catch (e) {}
+  if (!top.length || top[0].value < 3) { el.classList.add("hidden"); el.innerHTML = ""; return; }
+  el.classList.remove("hidden");
+  el.innerHTML = '<div class="attract-board-title">🔥 Most-loved shades here</div>' +
+    top.map((s, i) => `<div class="ab-row"><span class="ab-rank">${i + 1}</span><span class="ab-sw" style="background:${s.color}"></span><span class="ab-name">${s.label}</span></div>`).join("");
 }
 function exitAttract() {
   if (!attractActive) return;
@@ -3747,6 +3839,7 @@ function applyFeatureGating() {
   if (!FEATURES.photo) hideEl(photoBtn);
   if (!FEATURES.video) hideEl(recordBtn);
   if (!FEATURES.split) hideEl(splitBtn);
+  if (!FEATURES.video || !FEATURES.split) { const cb = $("clipBtn"); if (cb) hideEl(cb); } // before/after clip needs both
   if (!FEATURES.grid) { hideEl(gridBtn); hideEl(sheetBtn); }
   hideEl(boostBtn); // the hair-level slider replaces the old Brighten toggle
   if (!FEATURES.analysis) hideEl(analysisBtn);
