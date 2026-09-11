@@ -94,6 +94,12 @@ const FEATURES = Object.assign(
   CONFIG.features || {}
 );
 
+// Printer routing (staff-declared type). See config.default.js → print.
+const PRINT = Object.assign(
+  { mode: "color", transport: "bluetooth", widthMm: 58, qr: true, copies: 1, header: "", footer: "Great Lengths PH" },
+  CONFIG.print || {}
+);
+
 /* ---- i18n (Tagalog / English) ---- */
 const I18N = {
   en: {
@@ -1914,14 +1920,17 @@ function fitLeft(c, text, x, y, maxW) {
 let cardFormat = "square"; // social card shape for Share/Save: "square" | "portrait"
 
 // Dispatch to the right card layout.
-async function buildReportCard(a, format) {
+async function buildReportCard(a, format, opts) {
   if (format === "square") return buildSquareCard(a);
   if (format === "portrait") return buildPortraitCard(a);
-  return buildLandscapeCard(a);
+  return buildLandscapeCard(a, opts);
 }
 
 // Build a high-resolution A5-landscape analysis card (print-friendly + shareable).
-async function buildLandscapeCard(a) {
+// opts.noPhoto — omit the guest photo (for B&W printers, where grey photos look
+// muddy); the hero cell becomes a text "your colour" panel instead.
+async function buildLandscapeCard(a, opts) {
+  const noPhoto = !!(opts && opts.noPhoto);
   // Resolve the coupon code first (may claim one from the server pool) so it's
   // ready when the coupon is drawn below.
   if (FEATURES.coupon && CONFIG.coupon && CONFIG.coupon.enabled) {
@@ -1964,17 +1973,44 @@ async function buildLandscapeCard(a) {
   c.textAlign = "left";
 
   // Hero: photo + profile + brighten panel
-  const photo = previewCanvas(sel, 520);
   const px = 60, py = 195, pw = 340, ph = 420;
-  c.save();
-  roundRect(c, px, py, pw, ph, 18);
-  c.clip();
-  drawCover(c, photo, px, py, pw, ph);
-  c.restore();
-  c.strokeStyle = "#e3e3e3";
-  c.lineWidth = 2;
-  roundRect(c, px, py, pw, ph, 18);
-  c.stroke();
+  if (noPhoto) {
+    // B&W printer: skip the guest photo (muddy in grey) — show a clean "your
+    // colour" text panel that reads well in monochrome instead.
+    c.fillStyle = "#f5f5f2";
+    roundRect(c, px, py, pw, ph, 18);
+    c.fill();
+    c.strokeStyle = "#e3e3e3";
+    c.lineWidth = 2;
+    roundRect(c, px, py, pw, ph, 18);
+    c.stroke();
+    c.textAlign = "center";
+    c.fillStyle = "#b8942f";
+    c.font = "700 26px " + sans;
+    c.fillText("YOUR COLOUR", px + pw / 2, py + 70);
+    c.fillStyle = "#1a1a1a";
+    c.font = "700 40px " + sans;
+    wrapText(c, selectedShade.name, px + pw / 2, py + 130, pw - 48, 46, 2, "center");
+    c.fillStyle = "#555";
+    c.font = "400 24px " + sans;
+    c.fillText(a.level.name, px + pw / 2, py + 250);
+    c.fillText(cap(a.hairTone) + " undertone", px + pw / 2, py + 288);
+    c.fillStyle = "#999";
+    c.font = "italic 20px " + sans;
+    c.fillText("(photo omitted — B&W print)", px + pw / 2, py + ph - 34);
+    c.textAlign = "left";
+  } else {
+    const photo = previewCanvas(sel, 520);
+    c.save();
+    roundRect(c, px, py, pw, ph, 18);
+    c.clip();
+    drawCover(c, photo, px, py, pw, ph);
+    c.restore();
+    c.strokeStyle = "#e3e3e3";
+    c.lineWidth = 2;
+    roundRect(c, px, py, pw, ph, 18);
+    c.stroke();
+  }
 
   let bx = 430, by = 235;
   c.fillStyle = "#b8942f";
@@ -2504,10 +2540,86 @@ async function saveReportImage() {
   }, "image/jpeg", 0.92);
 }
 
+// Compose the ESC/POS thermal receipt (no photo — thermal is mono, low-res).
+// Uses the same consultant game plan as the A5 report, condensed to a slip.
+function buildThermalReceipt(a) {
+  if (!window.ICPrinter) return null;
+  const r = window.ICPrinter.receipt({ widthMm: PRINT.widthMm || 58 });
+  const loc = (CONFIG.location || {}).name || "";
+  const header = PRINT.header || loc || "iColor Plus";
+  const dateStr = new Date().toLocaleString(undefined, { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+
+  r.align("center").bold(true).size(1).text(header).bold(false);
+  r.text("Hair Colour Analysis").text(dateStr).rule();
+
+  r.align("center").bold(true).size(2).text(selectedShade.name).size(1).bold(false);
+  if (selectedShade.hex) r.text(selectedShade.hex.toUpperCase());
+  r.feed(1);
+
+  r.align("left");
+  r.text("Your hair:  " + a.level.name);
+  r.text("Undertone:  " + cap(a.hairTone));
+  if (a.skin) r.text("Skin tone:  " + a.skinDepth + (a.skinUndertone ? " / " + cap(a.skinUndertone) : ""));
+  r.rule();
+
+  const gp = FEATURES.gameplan ? colourGamePlan(a) : null;
+  if (gp) {
+    r.bold(true).text("HOW TO GET YOUR COLOUR").bold(false);
+    gp.stepsPlain.slice(0, 5).forEach((s, i) => r.wrap((i + 1) + ". " + s));
+    r.feed(1);
+    if (gp.kit && gp.kit.length) {
+      r.bold(true).text("YOUR KIT").bold(false);
+      gp.kit.forEach((k) => { if (k.price) r.row("- " + k.name, k.price); else r.wrap("- " + k.name); });
+    }
+    if (gp.offer) { r.feed(1); r.align("center").wrap(gp.offer.replace(/^[^A-Za-z0-9]+/, "")); r.align("left"); }
+  } else {
+    r.bold(true).text("TOP MATCHES").bold(false);
+    (a.recs || []).slice(0, 3).forEach((m) => r.text("- " + m.shade.name));
+  }
+
+  // QR: prefer the offline "send to my phone" box; else a link to this shade.
+  if (PRINT.qr !== false && window.ICPrinter) {
+    let qrData = "";
+    const ho = CONFIG.handoff || {};
+    if (FEATURES.handoff && ho.url) qrData = ho.url;
+    else { const base = (CONFIG.qr || {}).baseUrl || location.origin; qrData = base + (base.indexOf("?") >= 0 ? "&" : "?") + "shade=" + encodeURIComponent(selectedShade.id || ""); }
+    if (qrData) { r.feed(1); r.align("center").text(FEATURES.handoff && ho.url ? "Scan to get your photos" : "Scan to try more shades").qr(qrData, PRINT.widthMm >= 76 ? 7 : 5); }
+  }
+
+  r.feed(1).align("center");
+  if (PRINT.footer) r.wrap(PRINT.footer);
+  r.wrap("Digital estimate — always patch-test.");
+  r.cut();
+  return r.bytes();
+}
+
+async function thermalPrintNow(a) {
+  if (!window.ICPrinter) { showToast("Printer support not loaded"); return; }
+  const transport = PRINT.transport || "bluetooth";
+  if (!window.ICPrinter.supported(transport)) {
+    showToast(transport === "usb"
+      ? "This device can't use a USB printer here. Use an Android/Windows kiosk, or switch to a Wi-Fi printer (Colour/B&W)."
+      : "This device can't use a Bluetooth printer here (iOS Safari can't). Use an Android/Windows kiosk, or a Wi-Fi printer (Colour/B&W).");
+    return;
+  }
+  const bytes = buildThermalReceipt(a);
+  if (!bytes) { showToast("Couldn't build the receipt"); return; }
+  showToast("Printing…");
+  try {
+    await window.ICPrinter.printThermal(bytes, { transport, copies: PRINT.copies || 1, onStatus: (s) => showToast(s) });
+    showToast("Printed ✓");
+    trk("print");
+  } catch (e) {
+    showToast("Print failed: " + (e && e.message ? e.message : "check the printer & pairing"));
+  }
+}
+
 async function printReportCard() {
   const a = lastAnalysis || analyzeCurrent();
   if (!a) { showToast("Analyze your hair first"); return; }
-  const cv = await buildReportCard(a);
+  if ((PRINT.mode || "color") === "thermal") { await thermalPrintNow(a); return; }
+  // Colour or B&W → the device's OS print dialog. B&W drops the muddy photo.
+  const cv = await buildReportCard(a, "landscape", { noPhoto: PRINT.mode === "bw" });
   printReport.innerHTML = `<img class="card" src="${cv.toDataURL("image/jpeg", 0.92)}" alt="iColor Plus hair analysis" />`;
   const img = printReport.querySelector("img");
   await (img.complete ? Promise.resolve() : new Promise((r) => { img.onload = img.onerror = r; }));

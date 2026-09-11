@@ -153,6 +153,34 @@
       </div>
     </div>
 
+    <div class="a-card" id="sa-card-printer">
+      <h2>Printer <span class="muted">— connected device (override)</span></h2>
+      <p class="hint" style="color:var(--muted);font-size:12.5px;margin:-4px 0 12px">Which printer is wired to this kiosk. Browsers can't detect colour vs mono, so it's set here. <b>Colour</b>/<b>B&amp;W</b> use the device's own print dialog (USB / Wi-Fi / AirPrint / Mopria); B&amp;W drops the guest photo. <b>Thermal receipt</b> drives a USB/Bluetooth ESC/POS printer directly (Chrome/Edge on Windows &amp; Android — not iPhone/iPad). Use <b>Test print</b> on the kiosk to pair &amp; verify. Active when the <b>Print</b> feature is on.</p>
+      <div class="row" style="gap:14px;flex-wrap:wrap;align-items:flex-end">
+        <div class="field" style="min-width:200px"><label>Printer type</label>
+          <select id="prMode">
+            <option value="color">Colour (full report + photo)</option>
+            <option value="bw">Black &amp; White (no photo)</option>
+            <option value="thermal">Thermal receipt (USB / Bluetooth)</option>
+          </select>
+        </div>
+        <button id="prTest" class="btn ghost" type="button">Test print</button>
+        <span id="prStatus" class="muted" style="font-size:12.5px"></span>
+      </div>
+      <div id="prThermal" class="row" style="gap:14px;flex-wrap:wrap;align-items:flex-end;margin-top:12px;display:none">
+        <div class="field" style="min-width:150px"><label>Connection</label>
+          <select id="prTransport"><option value="bluetooth">Bluetooth</option><option value="usb">USB (wired)</option></select>
+        </div>
+        <div class="field" style="min-width:130px"><label>Paper width</label>
+          <select id="prWidth"><option value="58">58 mm</option><option value="80">80 mm</option></select>
+        </div>
+        <div class="field" style="width:90px"><label>Copies</label><input id="prCopies" type="number" min="1" max="5" class="num" /></div>
+        <label class="perm" style="width:max-content"><input type="checkbox" id="prQr" /> Print a QR (photos / more shades)</label>
+        <div class="field" style="flex:1;min-width:180px"><label>Receipt header</label><input id="prHeader" type="text" placeholder="(blank = location name)" /></div>
+        <div class="field" style="flex:1;min-width:180px"><label>Receipt footer</label><input id="prFooter" type="text" placeholder="Great Lengths PH" /></div>
+      </div>
+    </div>
+
     <div class="a-card" id="sa-card-commerce">
       <h2>Shop the look <span class="muted">— ecommerce link per colour (override)</span></h2>
       <p class="hint" style="color:var(--muted);font-size:12.5px;margin:-4px 0 12px">Per-SKU product links for the in-camera shop card. Shopee/Lazada: paste the URL and enter image URL + price manually. Shopify: paste URL + Auto-fill. Active when the “Shop the look” feature is on.</p>
@@ -307,4 +335,5 @@
 <script src="analytics.js"></script>
 <script src="backend.js"></script>
 <script src="commerce.js"></script>
+<script src="printer.js"></script>
 <script src="superadmin.js"></script>

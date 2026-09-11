@@ -64,6 +64,7 @@
   cfg.promo = Object.assign({ enabled: false, shadeId: "", title: "Shade of the Week", message: "", image: "", popup: false, popupText: "Tap the screen, and try-on our iColor products!" }, cfg.promo || {});
   cfg.coupon = Object.assign({ enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true, source: "generated" }, cfg.coupon || {});
   cfg.printLayout = Object.assign({ title: "Personalized Hair Colour Analysis", accentFrom: "#5f7d2e", accentTo: "#b8942f", footer: "", showBrighten: true, showMatches: true }, cfg.printLayout || {});
+  cfg.print = Object.assign({ mode: "color", transport: "bluetooth", widthMm: 58, qr: true, copies: 1, header: "", footer: "Great Lengths PH" }, cfg.print || {});
   cfg.commerce = Object.assign({ currency: "₱", buttonLabel: "Add to Cart", showQr: true, checkout: "product" }, cfg.commerce || {});
   if (cfg.defaultLevel == null) cfg.defaultLevel = (DEFAULT.defaultLevel != null ? DEFAULT.defaultLevel : 0);
   if (cfg.colorStrength == null) cfg.colorStrength = (DEFAULT.colorStrength != null ? DEFAULT.colorStrength : 0.22);
@@ -107,6 +108,16 @@
       $("plBrighten").checked = cfg.printLayout.showBrighten !== false;
       $("plMatches").checked = cfg.printLayout.showMatches !== false;
     }
+    if ($("prMode")) {
+      $("prMode").value = cfg.print.mode || "color";
+      $("prTransport").value = cfg.print.transport || "bluetooth";
+      $("prWidth").value = String(cfg.print.widthMm || 58);
+      $("prCopies").value = cfg.print.copies || 1;
+      $("prQr").checked = cfg.print.qr !== false;
+      $("prHeader").value = cfg.print.header || "";
+      $("prFooter").value = cfg.print.footer || "";
+      const th = $("prThermal"); if (th) th.style.display = (cfg.print.mode === "thermal") ? "" : "none";
+    }
   }
   function wireContentEditors() {
     const on = (id, ev, fn) => { const el = $(id); if (el) el.addEventListener(ev, fn); };
@@ -142,6 +153,20 @@
     on("plFooter", "input", (e) => (cfg.printLayout.footer = e.target.value));
     on("plBrighten", "change", (e) => (cfg.printLayout.showBrighten = e.target.checked));
     on("plMatches", "change", (e) => (cfg.printLayout.showMatches = e.target.checked));
+    on("prMode", "change", (e) => { cfg.print.mode = e.target.value; const th = $("prThermal"); if (th) th.style.display = (e.target.value === "thermal") ? "" : "none"; });
+    on("prTransport", "change", (e) => (cfg.print.transport = e.target.value));
+    on("prWidth", "change", (e) => (cfg.print.widthMm = parseInt(e.target.value, 10) || 58));
+    on("prCopies", "input", (e) => (cfg.print.copies = Math.max(1, Math.min(5, parseInt(e.target.value, 10) || 1))));
+    on("prQr", "change", (e) => (cfg.print.qr = e.target.checked));
+    on("prHeader", "input", (e) => (cfg.print.header = e.target.value));
+    on("prFooter", "input", (e) => (cfg.print.footer = e.target.value));
+    on("prTest", "click", async () => {
+      const st = $("prStatus"); const set = (m) => { if (st) st.textContent = m; };
+      if (!window.ICPrinter) { set("Printer module not loaded."); return; }
+      set("Starting…");
+      try { const kind = await window.ICPrinter.testPrint(cfg.print, set); set(kind === "thermal" ? "Sent to printer ✓" : "Opened print dialog ✓"); }
+      catch (err) { set("Failed: " + (err && err.message ? err.message : "check the printer")); }
+    });
   }
   wireContentEditors();
 

@@ -115,6 +115,29 @@ window.ICOLOR_DEFAULT_CONFIG = {
   //   `campaign` also filters which pool codes are claimed.
   coupon: { enabled: false, code: "", label: "In-store offer", terms: "", campaign: "", unique: true, source: "generated" },
 
+  // Printer / output routing (gated by features.print). A browser cannot detect a
+  // printer's colour capability, so STAFF declare the connected printer type here;
+  // it changes what the analysis printout contains and how it is sent.
+  //   mode "color"   — full A5 report WITH the guest photo (inkjet / colour laser).
+  //   mode "bw"      — the SAME A5 report but the photo is dropped (mono laser —
+  //                    grey photos look muddy and waste toner).
+  //   mode "thermal" — a compact ESC/POS receipt (no photo) sent straight to a
+  //                    USB / Bluetooth receipt printer; ideal for small event kiosks.
+  // Colour & B&W print through the DEVICE's own print dialog (window.print), which
+  // reaches AirPrint (iOS), Mopria (Android) and Windows printers over USB/Wi-Fi.
+  // Thermal talks to the printer directly via Web Bluetooth or WebUSB — supported in
+  // Chrome/Edge on Windows & Android (not iOS Safari). Staff pair it once via the
+  // "Test print" button in Admin; the grant is remembered for this kiosk.
+  print: {
+    mode: "color",           // "color" | "bw" | "thermal"
+    transport: "bluetooth",  // thermal only: "bluetooth" | "usb"
+    widthMm: 58,             // thermal only: 58 | 80 (paper width)
+    qr: true,                // thermal: print a QR (the "send to my phone" box link if on, else the shade link)
+    copies: 1,               // thermal: number of copies
+    header: "",              // thermal top line (blank = this deployment's location name)
+    footer: "Great Lengths PH",  // thermal bottom line
+  },
+
   // A5 print report design (edited in the client admin when 'print' is enabled).
   printLayout: {
     title: "Personalized Hair Colour Analysis",
