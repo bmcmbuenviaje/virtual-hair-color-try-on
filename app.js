@@ -23,8 +23,8 @@ const MASK_CUTOFF = 0.15; // legacy soft cutoff (kept for reference; see maskAlp
 // that spills onto the forehead / scalp / temples — so raw confidence would tint
 // skin. maskAlpha() zeroes anything below MASK_LO (skin/scalp) and smoothsteps up
 // to full only for solid hair, so the colour never lands on the scalp.
-const MASK_LO = 0.55; // below this = not hair → no colour at all
-const MASK_HI = 0.82; // at/above this = solid hair → full colour
+const MASK_LO = 0.5;  // below this = not hair → no colour at all
+const MASK_HI = 0.86; // at/above this = solid hair → full colour (soft feather between)
 function maskAlpha(m) {
   if (m <= MASK_LO) return 0;
   if (m >= MASK_HI) return 1;
@@ -206,7 +206,7 @@ let selectedShade =
 // covers the box swatches (virgin ≈ stop 0, pre-lightened ≈ mid, Level 9 ≈ stop 4).
 const LEVEL_LIFT = [0.00, 0.30, 0.48, 0.63, 0.78, 0.90]; // stop 0..5 → base pre-lighten
 const MAX_LEVEL = LEVEL_LIFT.length - 1;                 // 5 applications
-const DEPOSIT_STRENGTH = 0.9;                            // one application lays full colour
+const DEPOSIT_STRENGTH = 0.84;                           // one application; a touch of the real hair shows through
 function levelLabel(i) {
   i = Math.max(0, Math.min(MAX_LEVEL, i | 0));
   if (i === 0) return t("lvl_base");
@@ -358,8 +358,12 @@ function makeLUT(hex) {
   const fr = (dr / 255) * DEPOSIT_GAIN;
   const fg = (dg / 255) * DEPOSIT_GAIN;
   const fb = (db / 255) * DEPOSIT_GAIN;
+  // Gamma-based pre-lightening: raises the hair's LEVEL while preserving the
+  // strand-to-strand light/dark texture (a linear lerp-to-white flattens it and
+  // looks painted on). liftAmt 0 → gamma 1 (untouched); higher → brighter base.
+  const glift = 1 / (1 + 2.4 * liftAmt);
   for (let v = 0; v < 256; v++) {
-    const base = v + (255 - v) * liftAmt; // pre-lighten the base to the chosen hair level
+    const base = 255 * Math.pow(v / 255, glift);
     R[v] = base * fr;
     G[v] = base * fg;
     B[v] = base * fb;
@@ -375,6 +379,22 @@ function buildMap(len, target) {
   const m = new Uint16Array(len);
   for (let i = 0; i < len; i++) m[i] = Math.min(target - 1, (i * target / len) | 0);
   return m;
+}
+// Bilinear map: per output pixel, the lower mask index (i0) + fractional weight (fr)
+// so the low-res hair mask can be interpolated smoothly (no stair-stepped edges).
+function buildMapBil(len, target) {
+  const i0 = new Uint16Array(len), fr = new Float32Array(len);
+  const maxI = target - 1;
+  const scale = (len > 1 && target > 1) ? maxI / (len - 1) : 0;
+  for (let i = 0; i < len; i++) {
+    let g = i * scale;
+    if (g > maxI) g = maxI; else if (g < 0) g = 0;
+    let a = g | 0;
+    if (a > maxI) a = maxI;
+    i0[i] = a;
+    fr[i] = g - a;
+  }
+  return { i0, fr };
 }
 
 /* ============================================================
@@ -589,20 +609,25 @@ function isRecording() {
 
 function recolorProc(pw, ph) {
   if (mapKey.pw !== pw || mapKey.ph !== ph || mapKey.mw !== maskW || mapKey.mh !== maskH) {
-    mapX = buildMap(pw, maskW);
-    mapY = buildMap(ph, maskH);
+    mapX = buildMapBil(pw, maskW);
+    mapY = buildMapBil(ph, maskH);
     Object.assign(mapKey, { pw, ph, mw: maskW, mh: maskH });
   }
   const frame = pctx.getImageData(0, 0, pw, ph);
   const d = frame.data;
   const s = strength;
   const R = sel.r, G = sel.g, B = sel.b;
+  const X0 = mapX.i0, XF = mapX.fr, Y0 = mapY.i0, YF = mapY.fr, mW = maskW, mH = maskH;
   for (let y = 0; y < ph; y++) {
-    const rowMask = mapY[y] * maskW;
+    const y0 = Y0[y], fy = YF[y], y1 = y0 + 1 < mH ? y0 + 1 : y0;
+    const rowA = y0 * mW, rowB = y1 * mW;
     const rowPix = y * pw;
     for (let x = 0; x < pw; x++) {
-      const m = maskData[rowMask + mapX[x]];
-      const ma = maskAlpha(m);
+      const x0 = X0[x], fx = XF[x], x1 = x0 + 1 < mW ? x0 + 1 : x0;
+      const a0 = maskData[rowA + x0], b0 = maskData[rowA + x1];
+      const a1 = maskData[rowB + x0], b1 = maskData[rowB + x1];
+      const top = a0 + (b0 - a0) * fx, bot = a1 + (b1 - a1) * fx;
+      const ma = maskAlpha(top + (bot - top) * fy); // bilinear-sampled hair confidence
       if (ma <= 0) continue;
       const a = ma * s;
       const i = (rowPix + x) << 2;
@@ -782,8 +807,8 @@ function renderGrid() {
 
   const mirror = activeMirror;
   if (maskData && (gKey.cw !== cw || gKey.ch !== ch || gKey.mw !== maskW || gKey.mh !== maskH)) {
-    gMapX = buildMap(cw, maskW);
-    gMapY = buildMap(ch, maskH);
+    gMapX = buildMapBil(cw, maskW);
+    gMapY = buildMapBil(ch, maskH);
     Object.assign(gKey, { cw, ch, mw: maskW, mh: maskH });
   }
 
@@ -838,13 +863,21 @@ function renderGrid() {
 function recolorBuffer(work, w, h, lut, mapx, mapy, mirror) {
   const s = strength;
   const R = lut.r, G = lut.g, B = lut.b;
+  const X0 = mapx.i0, XF = mapx.fr, Y0 = mapy.i0, YF = mapy.fr, mW = maskW, mH = maskH, mWm1 = mW - 1;
   for (let y = 0; y < h; y++) {
-    const rowMask = mapy[y] * maskW;
+    const y0 = Y0[y], fy = YF[y], y1 = y0 + 1 < mH ? y0 + 1 : y0;
+    const rowA = y0 * mW, rowB = y1 * mW;
     const rowPix = y * w;
     for (let x = 0; x < w; x++) {
-      const mx = mirror ? maskW - 1 - mapx[x] : mapx[x];
-      const m = maskData[rowMask + mx];
-      const ma = maskAlpha(m);
+      let gx = X0[x] + XF[x];            // float mask-x (unmirrored)
+      if (mirror) gx = mWm1 - gx;
+      let x0 = gx | 0; if (x0 < 0) x0 = 0; else if (x0 > mWm1) x0 = mWm1;
+      let fx = gx - x0; if (fx < 0) fx = 0;
+      const x1 = x0 + 1 < mW ? x0 + 1 : x0;
+      const a0 = maskData[rowA + x0], b0 = maskData[rowA + x1];
+      const a1 = maskData[rowB + x0], b1 = maskData[rowB + x1];
+      const top = a0 + (b0 - a0) * fx, bot = a1 + (b1 - a1) * fx;
+      const ma = maskAlpha(top + (bot - top) * fy); // bilinear-sampled hair confidence
       if (ma <= 0) continue;
       const a = ma * s;
       const i = (rowPix + x) << 2;
@@ -917,8 +950,8 @@ function buildComparisonSheet() {
   bctx.setTransform(1, 0, 0, 1, 0, 0);
   const baseImg = bctx.getImageData(0, 0, cellW, imgH);
   const mirror = activeMirror;
-  const mapx = buildMap(cellW, maskW);
-  const mapy = buildMap(imgH, maskH);
+  const mapx = buildMapBil(cellW, maskW);
+  const mapy = buildMapBil(imgH, maskH);
   const work = new Uint8ClampedArray(baseImg.data.length);
   const cellImg = c.createImageData(cellW, imgH);
 
@@ -1743,7 +1776,7 @@ function previewCanvas(lut, w) {
   if (lut && maskData) {
     const img = c.getImageData(0, 0, w, h);
     const work = new Uint8ClampedArray(img.data);
-    const mapx = buildMap(w, maskW), mapy = buildMap(h, maskH);
+    const mapx = buildMapBil(w, maskW), mapy = buildMapBil(h, maskH);
     recolorBuffer(work, w, h, lut, mapx, mapy, mirror);
     img.data.set(work);
     c.putImageData(img, 0, 0);
